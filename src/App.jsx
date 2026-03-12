@@ -235,10 +235,10 @@ function GroupB({ db003Mode, setDb003Mode, db007Mode, setDb007Mode }) {
         <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
             <div style={{ flex: 1 }}><SectionTitle>DB-003 · Loading Rate (t/h)</SectionTitle></div>
-            <FilterToggle 
-              active={db003Mode} 
-              options={[{ label: "PER UNIT", value: "unit" }, { label: "PER OPERATOR", value: "operator" }]} 
-              onChange={setDb003Mode} 
+            <FilterToggle
+              active={db003Mode}
+              options={[{ label: "PER UNIT", value: "unit" }, { label: "PER OPERATOR", value: "operator" }]}
+              onChange={setDb003Mode}
             />
           </div>
           <ResponsiveContainer width="100%" height={200}>
@@ -258,10 +258,10 @@ function GroupB({ db003Mode, setDb003Mode, db007Mode, setDb007Mode }) {
         <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
             <div style={{ flex: 1 }}><SectionTitle>DB-007 · Fuel Efficiency (L/ton)</SectionTitle></div>
-            <FilterToggle 
-              active={db007Mode} 
-              options={[{ label: "PER UNIT", value: "unit" }, { label: "PER OPERATOR", value: "operator" }]} 
-              onChange={setDb007Mode} 
+            <FilterToggle
+              active={db007Mode}
+              options={[{ label: "PER UNIT", value: "unit" }, { label: "PER OPERATOR", value: "operator" }]}
+              onChange={setDb007Mode}
             />
           </div>
           <ResponsiveContainer width="100%" height={200}>
@@ -356,18 +356,18 @@ function GroupC({ dailyTarget, setDailyTarget, monthlyTarget, setMonthlyTarget }
         <div style={{ fontSize: 12, fontWeight: 700, color: "#1e293b", fontFamily: "DM Mono", textTransform: "uppercase", letterSpacing: "0.05em" }}>Target Configuration</div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <label style={{ fontSize: 11, color: "#64748b", fontFamily: "DM Mono" }}>Daily (t):</label>
-          <input 
-            type="number" 
-            value={dailyTarget} 
+          <input
+            type="number"
+            value={dailyTarget}
             onChange={(e) => setDailyTarget(Number(e.target.value))}
             style={{ width: 100, padding: "6px 10px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "DM Mono", fontWeight: 600 }}
           />
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <label style={{ fontSize: 11, color: "#64748b", fontFamily: "DM Mono" }}>Monthly (t):</label>
-          <input 
-            type="number" 
-            value={monthlyTarget} 
+          <input
+            type="number"
+            value={monthlyTarget}
             onChange={(e) => setMonthlyTarget(Number(e.target.value))}
             style={{ width: 120, padding: "6px 10px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "DM Mono", fontWeight: 600 }}
           />
@@ -494,10 +494,10 @@ function GroupC({ dailyTarget, setDailyTarget, monthlyTarget, setMonthlyTarget }
 // ─── MAIN ────────────────────────────────────────────────────────────────────
 // ─── PTSI COMPONENTS ────────────────────────────────────────────────────────
 function SidebarItem({ icon, label, active, subItems = [], collapsed }) {
-  const [isOpen, setIsOpen] = useState(active);
+  const [isOpen, setIsOpen] = useState(false);
   return (
     <div style={{ marginBottom: 4 }}>
-      <div 
+      <div
         onClick={() => !collapsed && setIsOpen(!isOpen)}
         title={collapsed ? label : ""}
         style={{
@@ -520,8 +520,8 @@ function SidebarItem({ icon, label, active, subItems = [], collapsed }) {
       {!collapsed && isOpen && subItems.length > 0 && (
         <div style={{ marginLeft: 36, marginTop: 4, display: "flex", flexDirection: "column", gap: 4 }}>
           {subItems.map((item, idx) => (
-            <div key={idx} style={{ 
-              fontSize: 12, padding: "8px 0", cursor: "pointer", 
+            <div key={idx} style={{
+              fontSize: 12, padding: "8px 0", cursor: "pointer",
               color: item.active ? "#0f172a" : "#94a3b8",
               fontWeight: item.active ? 600 : 400
             }}>
@@ -544,7 +544,7 @@ function Sidebar({ collapsed }) {
       <div style={{ padding: collapsed ? "0 0 32px" : "0 12px 32px", display: "flex", justifyContent: "center", alignItems: "center" }}>
         <img src={ptsiLogo} alt="PTSI Logo" style={{ width: collapsed ? 45 : 120, height: "auto", transition: "width 0.3s" }} />
       </div>
-      
+
       <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
         <SidebarItem icon="📊" label="Dashboard" active={true} collapsed={collapsed} subItems={[
           { label: "Operations", active: true },
@@ -561,11 +561,11 @@ function Sidebar({ collapsed }) {
 
         {!collapsed && (
           <div style={{ marginTop: 24, padding: "0 12px", animation: "fadeIn 0.5s ease-out 0.3s both" }}>
-            <a 
-              href="/src/FLS_Diagrams.html" 
+            <a
+              href="fls-diagrams.html"
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                width: "100%", padding: "14px", 
+                width: "100%", padding: "14px",
                 background: "linear-gradient(135deg, #F59E0B, #EF4444)",
                 color: "white", border: "none", borderRadius: 12,
                 fontWeight: 800, fontSize: 13, cursor: "pointer",
@@ -589,13 +589,13 @@ function Sidebar({ collapsed }) {
           </div>
         )}
       </div>
-      
+
       {!collapsed && (
-        <div style={{ 
+        <div style={{
           padding: "16px", borderTop: "1px solid #f1f5f9", fontSize: 10, color: "#94a3b8",
           textAlign: "center", animation: "fadeIn 0.3s"
         }}>
-          © 2026 PTSI · Fleet Dispatch System<br/>Version 2.0
+          © 2026 PTSI · Fleet Dispatch System<br />Version 2.0
         </div>
       )}
     </div>
@@ -623,9 +623,9 @@ function Header({ activeTab, setActiveTab, tabs, onToggleSidebar }) {
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, color: "#64748b", fontSize: 13 }}>
-          <button 
+          <button
             onClick={onToggleSidebar}
-            style={{ 
+            style={{
               background: "#f8fafc", padding: "6px 8px", borderRadius: 6, border: "1px solid #f1f5f9",
               cursor: "pointer", fontSize: 18, transition: "background 0.2s"
             }}
@@ -640,8 +640,8 @@ function Header({ activeTab, setActiveTab, tabs, onToggleSidebar }) {
 
       <div style={{ display: "flex", alignItems: "stretch", height: "100%", gap: 4 }}>
         {tabs.map(t => (
-          <button 
-            key={t.id} 
+          <button
+            key={t.id}
             onClick={() => setActiveTab(t.id)}
             style={{
               background: "transparent", border: "none",
@@ -662,7 +662,7 @@ function Header({ activeTab, setActiveTab, tabs, onToggleSidebar }) {
           <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>Fachry Nuzuli Kamal</div>
           <div style={{ fontSize: 11, color: "#64748b" }}>sysadmin</div>
         </div>
-        <div style={{ 
+        <div style={{
           width: 36, height: 36, borderRadius: "50%", background: "#1e293b",
           display: "flex", alignItems: "center", justifyContent: "center",
           color: "white", fontSize: 12, fontWeight: 600
@@ -676,7 +676,7 @@ function Header({ activeTab, setActiveTab, tabs, onToggleSidebar }) {
 export default function App() {
   const [active, setActive] = useState("B");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  
+
   // Dynamic Targets
   const [dailyTarget, setDailyTarget] = useState(19000);
   const [monthlyTarget, setMonthlyTarget] = useState(570000);
@@ -700,12 +700,12 @@ export default function App() {
         ::-webkit-scrollbar-track { background: #f8fafc; }
         ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 3px; }
       `}</style>
-      
+
       <Sidebar collapsed={isSidebarCollapsed} />
-      
+
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         <Header activeTab={active} setActiveTab={setActive} tabs={tabs} onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
-        
+
         <div style={{ padding: "24px 32px", maxWidth: 1600, margin: "0 auto", width: "100%" }}>
           <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
             <div>
@@ -720,13 +720,13 @@ export default function App() {
           <div style={{ animation: "fadeIn 0.4s ease-out" }}>
             {active === "A" && <GroupA />}
             {active === "B" && (
-              <GroupB 
-                db003Mode={db003Mode} setDb003Mode={setDb003Mode} 
-                db007Mode={db007Mode} setDb007Mode={setDb007Mode} 
+              <GroupB
+                db003Mode={db003Mode} setDb003Mode={setDb003Mode}
+                db007Mode={db007Mode} setDb007Mode={setDb007Mode}
               />
             )}
             {active === "C" && (
-              <GroupC 
+              <GroupC
                 dailyTarget={dailyTarget} setDailyTarget={setDailyTarget}
                 monthlyTarget={monthlyTarget} setMonthlyTarget={setMonthlyTarget}
               />
