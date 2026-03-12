@@ -306,7 +306,7 @@
         TC->>DG: Open downtime record for MH unit
         TC->>DG: Input: Unit · Category · Start Time · Stop Time
         Note right of TC: Retroactive entry — actual event time,<br />not current clock time
-        DG->>FDS: POST downtime_event {unit_id, category,<br />actual_start, actual_stop, tc_user_id, save_timestamp}
+        DG->>FDS: POST downtime_event {unit_id, category, actual_start, actual_stop, tc_user_id, save_timestamp}
         FDS-->>DG: 200 OK — record saved
         DB->>FDS: Query downtime by unit + date range
         FDS-->>DB: Downtime records → Availability % per unit
@@ -318,8 +318,7 @@
         TC->>DG: Add sequence row: Operator · Start · Stop<br />HM Start · HM Finish · FM Start · FM Finish
         Note right of TC: One row per operator sequence.<br />Multiple sequences per day supported.
         DG->>DG: Calculate HM Delta = HM Finish − HM Start<br />Calculate Fuel Delta = FM Finish − FM Start
-        DG->>FDS: POST sequence {operator_id, actual_start, actual_stop,<br />hm_start, hm_finish, fm_start, fm_finish,
-        save_timestamp}
+        DG->>FDS: POST sequence {operator_id, actual_start, actual_stop, hm_start, hm_finish, fm_start, fm_finish, save_timestamp}
         FDS-->>DG: 200 OK — sequence saved
         Note over FDS: FDS sums all sequences per unit per day:<br />Total HM Working Hours · Total Fuel Consumed
         DB->>FDS: Query sequences by unit + date
@@ -330,12 +329,12 @@
         Note over TC,DB: ── DA-005 · Barge Attach / Detach ────────────────────────
         TC->>DG: Attach barge to loading point
         TC->>DG: Input: Barge ID · Loading Point · Actual Attach Time
-        DG->>FDS: POST barge_attach {barge_id, loading_point,<br />actual_attach_time, save_timestamp}
+        DG->>FDS: POST barge_attach {barge_id, loading_point, actual_attach_time, save_timestamp}
         FDS-->>DG: 200 OK — barge status: ATTACHED
         Note over TC,FDS: Loading operations proceed...
         TC->>DG: Detach barge (discharge complete)
         TC->>DG: Input: Actual Detach Time (retroactive if needed)
-        DG->>FDS: POST barge_detach {barge_id,<br />actual_detach_time, save_timestamp}
+        DG->>FDS: POST barge_detach {barge_id, actual_detach_time, save_timestamp}
         FDS-->>DG: 200 OK — barge status: DETACHED
         Note over FDS: FDS calculates Duration = Detach − Attach
         DB->>FDS: Query barge events by date
@@ -347,7 +346,7 @@
         FA->>FDS: Open Target Management screen
         Note left of FA: FUTONG_ADMIN role only.<br />Field hidden for all other roles.
         FA->>FDS: Submit {period_type, period_ref, target_tonnes}
-        FDS->>FDS: Write audit log {prev_value, new_value,<br />user_id, changed_at}
+        FDS->>FDS: Write audit log {prev_value, new_value, user_id, changed_at}
         FDS-->>FA: 200 OK — target saved · audit logged
         DB->>FDS: Query target for period
         FDS-->>DB: Target value → Delivery Progress %
@@ -381,7 +380,7 @@
         FDS-->>DB: Full NETWEIGHT data
         else Unweighed trips exist
         FDS-->>DB: Partial NETWEIGHT + unweighed_count flag
-        DB->>DB: Render caution banner:<br />"N trips not yet weighed — tonnage may be incomplete"
+        DB->>DB: Render caution banner: "N trips not yet weighed"
         end
         end
       </div>
