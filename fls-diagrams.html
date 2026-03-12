@@ -302,7 +302,7 @@
         participant DB as Dashboard Layer
 
         rect rgb(240, 253, 244)
-        Note over TC,DB: ── DA-001 · Downtime Logging ──────────────────────────────
+        Note over TC,DB: -- DA-001 . Downtime Logging ------------------------------
         TC->>DG: Open downtime record for MH unit
         TC->>DG: Input: Unit · Category · Start Time · Stop Time
         Note right of TC: Retroactive entry — actual event time,<br />not current clock time
@@ -313,7 +313,7 @@
         end
 
         rect rgb(245, 243, 255)
-        Note over TC,DB: ── DA-002 / DA-003 / DA-004 · MH Timesheet Sequence ─────
+        Note over TC,DB: -- DA-002 / DA-003 / DA-004 . MH Timesheet Sequence -----
         TC->>DG: Open MH Timesheet for unit
         TC->>DG: Add sequence row: Operator · Start · Stop<br />HM Start · HM Finish · FM Start · FM Finish
         Note right of TC: One row per operator sequence.<br />Multiple sequences per day supported.
@@ -326,7 +326,7 @@
         end
 
         rect rgb(239, 246, 255)
-        Note over TC,DB: ── DA-005 · Barge Attach / Detach ────────────────────────
+        Note over TC,DB: -- DA-005 . Barge Attach / Detach ------------------------
         TC->>DG: Attach barge to loading point
         TC->>DG: Input: Barge ID · Loading Point · Actual Attach Time
         DG->>FDS: POST barge_attach {barge_id, loading_point, actual_attach_time, save_timestamp}
@@ -342,7 +342,7 @@
         end
 
         rect rgb(240, 253, 244)
-        Note over FA,DB: ── DA-006 · Delivery Target Input ───────────────────────
+        Note over FA,DB: -- DA-006 . Delivery Target Input -----------------------
         FA->>FDS: Open Target Management screen
         Note left of FA: FUTONG_ADMIN role only.<br />Field hidden for all other roles.
         FA->>FDS: Submit {period_type, period_ref, target_tonnes}
@@ -353,7 +353,7 @@
         end
 
         rect rgb(255, 251, 235)
-        Note over TC,DB: ── DA-007 · Loading Timestamp Precision ─────────────────
+        Note over TC,DB: -- DA-007 . Loading Timestamp Precision -----------------
         TC->>DG: Start Loading — truck trip
         TC->>DG: Input: Actual Start Time (retroactive)
         DG->>FDS: POST start_loading {trip_id, actual_start HH:mm:ss, save_timestamp}
@@ -366,7 +366,7 @@
         end
 
         rect rgb(255, 242, 242)
-        Note over MC,DB: ── Max-C Integration · NETWEIGHT Feed (DB-003 to DB-011) ─
+        Note over MC,DB: -- Max-C Integration . NETWEIGHT Feed (DB-003 to DB-011) -
         MC->>FDS: Push NETWEIGHT per truck per trip
         Note right of MC: 1–2 day accuracy lag.<br />Day boundary: 06:00 → 05:59 next day.
         FDS->>FDS: Match incoming Trip Ticket → existing trip record
