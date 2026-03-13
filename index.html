@@ -2,10 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/fls-dashboard/vite.svg" />
+    <link rel="icon" type="image/png" href="/fls-dashboard/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React</title>
-    <script type="module" crossorigin src="/fls-dashboard/assets/index-DuwvBLRP.js"></script>
+    <title>FLS Dashboard Mock-up</title>
+    <script>
+      (function() {
+        var redirect = sessionStorage.redirect;
+        delete sessionStorage.redirect;
+        if (redirect && redirect !== location.href) {
+          history.replaceState(null, null, redirect);
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="/fls-dashboard/assets/index-B-OLqBw1.js"></script>
     <link rel="stylesheet" crossorigin href="/fls-dashboard/assets/index-CbAuEh2z.css">
   </head>
   <body>
