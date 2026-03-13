@@ -364,16 +364,47 @@ export default function MobileMockup() {
       </div>
 
       {/* Tab row */}
-      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px', background: 'white', padding: '12px', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
         {tabs}
       </div>
 
-      {/* Device frame */}
-      <div style={{ background: '#2a2a2a', borderRadius: '10px', padding: '5px 5px 3px' }}>
-        <div style={{ background: 'white', borderRadius: '7px', overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: '460px' }}>
-          <div dangerouslySetInnerHTML={{ __html: hdr('Rindam Manihuruk', '20031492') }} />
-          <div dangerouslySetInnerHTML={{ __html: screenHTML }} />
-          <div dangerouslySetInnerHTML={{ __html: androidNav() }} />
+      {/* Device frame - LANDSCAPE */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        padding: '20px 0',
+        background: '#f1f5f9',
+        borderRadius: '12px'
+      }}>
+        <div style={{ 
+          background: '#2a2a2a', 
+          borderRadius: '32px', 
+          padding: '12px', 
+          boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
+          width: '840px',
+          height: '440px',
+          position: 'relative'
+        }}>
+          {/* Hardware bezel details */}
+          <div style={{ position: 'absolute', top: '50%', left: '8px', transform: 'translateY(-50%)', width: '4px', height: '40px', background: '#444', borderRadius: '2px' }} />
+          
+          <div style={{ 
+            background: 'white', 
+            borderRadius: '24px', 
+            overflow: 'hidden', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            width: '100%',
+            height: '100%',
+            border: '2px solid #000'
+          }}>
+            <div dangerouslySetInnerHTML={{ __html: hdr('Rindam Manihuruk', '20031492') }} />
+            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div dangerouslySetInnerHTML={{ __html: screenHTML }} style={{ flex: 1, overflowY: 'auto' }} />
+            </div>
+            <div dangerouslySetInnerHTML={{ __html: androidNav() }} />
+          </div>
         </div>
       </div>
 
