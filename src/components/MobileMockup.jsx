@@ -1,373 +1,340 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+/* ═══════════════════════════════════════════════════════════
+   CONSTANTS & MOCK DATA
+   ═══════════════════════════════════════════════════════════ */
+const C = {
+  navy: '#0F1D45', navyLt: '#1B2E6B', teal: '#0ABFDE', tealDk: '#0899B0',
+  amber: '#F59E0B', amberBg: '#FEF3C7', danger: '#EF4444', dangerBg: '#FEE2E2',
+  success: '#10B981', successBg: '#ECFDF5',
+  bg: '#F0F2F7', border: '#E5E7EB', muted: '#6B7280', text: '#111827',
+  card: '#FFFFFF', label: '#94A3B8',
+};
+const FONT = "'Outfit', sans-serif";
+const MONO = "'JetBrains Mono', monospace";
+
+const OPERATORS = ['Willyanto','Anggiat','Suharno','Ricardo','Faozi','Indahlen','Sahat','Arnol','Parningotan','Rivqi','Ikrar','Edon','Pusen','Juli'];
+const BARGES = ['BG. Sentosa Jaya 2308','BG. Glory Marine 7','BG. Glory Marine 3','BG. Capricorn 119','BG. Capricorn 122','BG. Glory Marine 12'];
+const DT_CATS = ['Daily Maintenance','Preventive Service','Urgent Repair','Breakdown'];
+
+const SK = 'fls_dashboard_state';
+const now = () => new Date().toISOString().slice(0, 16);
+const fmtT = i => { if(!i) return '—'; const d=new Date(i); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+const fmtD = i => { if(!i) return '—'; const d=new Date(i); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; };
+const fmtDT = i => `${fmtD(i)} ${fmtT(i)}`;
+const timeDelta = (a,b) => { if(!a||!b) return '—'; const ms=new Date(b)-new Date(a); const m=Math.floor(ms/60000); if(m<60) return `${m}m`; return `${Math.floor(m/60)}h ${m%60}m`; };
+
+const INIT = {
+  units: [
+    { id:'MHP0025', lp:'P1', jetty:'Jetty Futong - P1', barge:'BG. Sentosa Jaya 2308', bargeAt:'2026-03-16T06:00', op:'—', status:'idle', hm:1205, fm:4820, seq:null, load:null, dt:null, queue:[] },
+    { id:'MHP0026', lp:'P2', jetty:'Jetty Futong - P2', barge:'BG. Glory Marine 7', bargeAt:'2026-03-16T07:30', op:'—', status:'idle', hm:983, fm:3210, seq:null, load:null, dt:null, queue:[] },
+    { id:'MHP0027', lp:'P3', jetty:'Jetty Futong - P3', barge:'BG. Glory Marine 3', bargeAt:'2026-03-16T05:45', op:'—', status:'idle', hm:1450, fm:5680, seq:null, load:null, dt:null, queue:[] },
+    { id:'MHP0028', lp:'P4', jetty:'Jetty Futong - P4', barge:'BG. Capricorn 119', bargeAt:'2026-03-16T06:15', op:'—', status:'idle', hm:760, fm:2890, seq:null, load:null, dt:null, queue:[] },
+    { id:'MHP0029', lp:'P5', jetty:'Jetty Futong - P5', barge:null, bargeAt:null, op:'—', status:'idle', hm:540, fm:1920, seq:null, load:null, dt:null, queue:[] },
+  ],
+  trucks: ['BDP0012','RTP0344','BDP0088','RTP0199','BDP0155','RTP0401','BDP0222','RTP0285','BDP0310','RTP0422'],
+  ts: {},
+};
+
+function ldState() { try { const s=localStorage.getItem(SK); return s?JSON.parse(s):structuredClone(INIT); } catch { return structuredClone(INIT); } }
+function svState(s) { localStorage.setItem(SK, JSON.stringify(s)); }
+
+/* ═══════════════════════════════════════════════════════════
+   STYLES
+   ═══════════════════════════════════════════════════════════ */
+const sBtn = (bg, color, extra={}) => ({ background:bg, color, border:'none', borderRadius:'5px', padding:'8px 0', fontSize:'11px', fontWeight:700, cursor:'pointer', width:'100%', fontFamily:FONT, letterSpacing:'0.02em', ...extra });
+const sInput = (extra={}) => ({ width:'100%', border:`1.5px solid ${C.navyLt}`, borderRadius:'6px', padding:'9px 11px', fontSize:'13px', fontWeight:600, color:C.navy, fontFamily:MONO, background:'white', boxSizing:'border-box', ...extra });
+const sLabel = { fontSize:'10px', color:C.muted, fontWeight:600, marginBottom:'4px', fontFamily:FONT };
+const sField = { marginBottom:'12px' };
+
+/* ═══════════════════════════════════════════════════════════
+   SCREEN METADATA
+   ═══════════════════════════════════════════════════════════ */
+const SCREENS = {
+  tc:{ l:'TC Dashboard', i:'Homepage showing all 5 Loading Points (P1–P5). Click a Loading Point card to Start/End Sequence. Use action buttons below each card for truck loading, downtime, and timesheet.' },
+  startSeq:{ l:'Start Sequence', i:'Pair an Operator with this Material Handler. Key-in Operator Name, Start Timestamp (retroactive OK), Hour Meter, and Fuel Meter to begin a Timesheet Sequence.' },
+  endSeq:{ l:'End Sequence', i:'Unpair the Operator from this MH. Key-in End Timestamp, Hour Meter Finish, and Fuel Meter Finish to close the Timesheet Sequence.' },
+  startLoad:{ l:'Start Loading', i:'Begin loading the next truck in queue. Key-in start timestamp (retroactive OK).' },
+  finishLoad:{ l:'Finish Loading', i:'Finish loading the active truck. Key-in finish timestamp (retroactive OK). Truck departs queue.' },
+  trucks:{ l:'Assign Truck', i:'Pick an incoming truck from the global pool, then select which Loading Point (P1–P5) to assign it to.' },
+  startDt:{ l:'Start Downtime', i:'Log a downtime event. This automatically closes the current Timesheet Sequence (HM/FM from this form are used to close it). Status → Downtime.' },
+  endDt:{ l:'End Downtime', i:'Close the downtime event. Key-in end timestamp and meter readings. Status → Idle. You can then start a new Timesheet Sequence.' },
+  ts:{ l:'Timesheet', i:'Historical record of all completed Timesheet Sequences and their loading activities for this Loading Point.' },
+  barge:{ l:'Barge Operations', i:'Attach or detach a barge at this Loading Point. Must detach current barge before attaching a new one. Timestamps are retroactive.' },
+};
+
+/* ═══════════════════════════════════════════════════════════
+   MAIN COMPONENT
+   ═══════════════════════════════════════════════════════════ */
 export default function MobileMockup() {
-  const NAVY="#1B2E6B",NAVY2="#243A80",TEAL="#0ABFDE",AMBER="#F59E0B",AMBERBG="#FEF3C7",DANGER="#EF4444",SUCCESS="#10B981",GRAY="#F0F2F7",BORDER="#E5E7EB",MUTED="#6B7280",TEXT="#111827";
+  const [state, setState] = useState(ldState);
+  const [scr, setScr] = useState('tc');
+  const [aid, setAid] = useState(null); // active unit id
+  const [pickTruck, setPickTruck] = useState(null); // truck awaiting LP assignment
 
-  const [activeScreen, setActiveScreen] = useState('tc');
-  const [activeUnitId, setActiveUnitId] = useState(null);
+  useEffect(() => { svState(state); }, [state]);
 
-  // Global State for Prototype
-  const [units, setUnits] = useState([
-    { id: "MHP0025", jetty: "Jetty Futong - P1", barge: "BG. Sentosa Jaya 2308", op: "Amrojali", status: "running", queue: ["RTP0285"] },
-    { id: "MHP0026", jetty: "Jetty Futong - P2", barge: "BG. Glory Marine 7", op: "Ricardo H.", status: "idle", queue: [] },
-    { id: "MHP0027", jetty: "Jetty Futong - P3", barge: "BG. Glory Marine 3", op: "—", status: "idle", queue: [] },
-    { id: "MHP0028", jetty: "Jetty Futong - P5", barge: "BG. Capricorn 119", op: "—", status: "downtime", queue: ["BDP0057", "RTP0102"] },
-  ]);
+  const { units, trucks, ts } = state;
+  const gu = (id=aid) => units.find(u=>u.id===id) || units[0];
+  const si = SCREENS[scr] || SCREENS.tc;
 
-  const [incomingTrucks, setIncomingTrucks] = useState([
-    "BDP0012", "RTP0344", "BDP0088", "RTP0199"
-  ]);
+  const nav = (s, id=null) => { if(id) setAid(id); setPickTruck(null); setScr(s); };
+  const lpClick = u => { setAid(u.id); setScr(u.status==='idle'?'startSeq':u.status==='running'?'endSeq':'endDt'); };
 
-  const nav = (screen, unitId = null) => {
-    if (unitId) setActiveUnitId(unitId);
-    setActiveScreen(screen);
-  };
+  /* ─── ACTIONS ─────────────────────────────── */
+  const mut = (id, p) => setState(v=>({...v, units:v.units.map(u=>u.id===id?{...u,...p}:u)}));
 
-  const getUnit = () => units.find(u => u.id === activeUnitId) || units[0];
-
-  const updateUnitStatus = (id, newStatus, newOp = null) => {
-    setUnits(prev => prev.map(u => {
-      if (u.id === id) {
-        return { ...u, status: newStatus, op: newOp !== null ? newOp : u.op };
-      }
-      return u;
-    }));
-  };
-
-  const assignTruck = (truckStr, unitId) => {
-    setIncomingTrucks(prev => prev.filter(t => t !== truckStr));
-    setUnits(prev => prev.map(u => u.id === unitId ? { ...u, queue: [...u.queue, truckStr] } : u));
+  const doStartSeq = (id,op,t,hm,fm) => {
+    mut(id, { status:'running', op, seq:{op,startTime:t,hmStart:+hm,fmStart:+fm,loads:[]}, hm:+hm, fm:+fm, load:null });
     nav('tc');
   };
+  const doEndSeq = (id,t,hm,fm) => {
+    const u=gu(id); if(!u.seq) return;
+    const entry={...u.seq, endTime:t, hmEnd:+hm, fmEnd:+fm};
+    setState(v=>({...v,
+      units:v.units.map(uu=>uu.id===id?{...uu,status:'idle',op:'—',seq:null,load:null,hm:+hm,fm:+fm}:uu),
+      ts:{...v.ts,[id]:[...(v.ts[id]||[]),entry]}
+    }));
+    nav('tc');
+  };
+  const doStartLoad = (id,t) => {
+    const u=gu(id); if(!u.queue[0]) return;
+    mut(id, { load:{truckId:u.queue[0], startTime:t} });
+    nav('tc');
+  };
+  const doFinishLoad = (id,t) => {
+    const u=gu(id); if(!u.load) return;
+    const le={...u.load, endTime:t};
+    setState(v=>({...v,
+      units:v.units.map(uu=>{
+        if(uu.id!==id) return uu;
+        const ns=uu.seq?{...uu.seq,loads:[...uu.seq.loads,le]}:uu.seq;
+        return {...uu, load:null, queue:uu.queue.slice(1), seq:ns};
+      })
+    }));
+    nav('tc');
+  };
+  const doAssign = (truck, targetId) => {
+    setState(v=>({...v,
+      trucks:v.trucks.filter(t=>t!==truck),
+      units:v.units.map(u=>u.id===targetId?{...u,queue:[...u.queue,truck]}:u)
+    }));
+    setPickTruck(null); nav('tc');
+  };
+  const doStartDt = (id,cat,t,hm,fm) => {
+    const u=gu(id);
+    // auto-end active sequence
+    if(u.seq){
+      const entry={...u.seq, endTime:t, hmEnd:+hm, fmEnd:+fm};
+      setState(v=>({...v,
+        units:v.units.map(uu=>uu.id===id?{...uu, status:'downtime', op:'—', seq:null, load:null, dt:{category:cat,startTime:t,hmStart:+hm,fmStart:+fm}, hm:+hm, fm:+fm}:uu),
+        ts:{...v.ts,[id]:[...(v.ts[id]||[]),entry]}
+      }));
+    } else {
+      mut(id, { status:'downtime', dt:{category:cat,startTime:t,hmStart:+hm,fmStart:+fm}, hm:+hm, fm:+fm });
+    }
+    nav('tc');
+  };
+  const doEndDt = (id,t,hm,fm) => { mut(id, {status:'idle',dt:null,hm:+hm,fm:+fm}); nav('tc'); };
+  const doAttach = (id,b,t) => { const u=gu(id); if(u.barge){alert('⚠️ Detach current barge first before attaching a new one.');return;} mut(id,{barge:b,bargeAt:t}); nav('tc'); };
+  const doDetach = (id,t) => { mut(id,{barge:null,bargeAt:null}); nav('tc'); };
 
-  const SCREENS = [
-    {id:"tc", label:"TC Dashboard", info: "Redesigned TC dashboard featuring Top Summary Bar, live MH status indicators, and Truck Queuing UI mirroring the real-world flow (Barge -> MH -> Truck)."},
-    {id:"downtime", label:"Log Downtime", info: "Marks the unit as Downtime. Status pill on TC Dashboard will turn yellow."},
-    {id:"start", label:"Start Sequence", info: "Starts a loading sequence. Pops the first truck from the queue into 'Loading' state. Status turns green."},
-    {id:"stop", label:"Stop Sequence", info: "Finishes the sequence for the current truck. Truck is removed from queue. Status returns to Idle."},
-    {id:"ts", label:"Timesheet", info: "Shows historical sequences for the unit."},
-    {id:"barge", label:"Barge Operations", info: "Manage barge attachments and detachments for this unit."},
-    {id:"trucks", label:"Assign Truck", info: "Select an incoming truck to join the queue at a specific Material Handler."}
-  ];
-
-  const activeScreenConfig = SCREENS.find(s => s.id === activeScreen) || SCREENS[0];
-
-  const StatusPill = ({ status }) => {
-    if (status === 'running') return <span style={{ background: '#ECFDF5', color: '#065F46', border: `1px solid ${SUCCESS}`, padding: '2px 6px', borderRadius: '12px', fontSize: '9px', fontWeight: 700 }}>&#9679; RUNNING</span>;
-    if (status === 'downtime') return <span style={{ background: AMBERBG, color: '#92400E', border: `1px solid ${AMBER}`, padding: '2px 6px', borderRadius: '12px', fontSize: '9px', fontWeight: 700 }}>&#9679; DOWNTIME</span>;
-    return <span style={{ background: '#F3F4F6', color: MUTED, border: `1px solid ${BORDER}`, padding: '2px 6px', borderRadius: '12px', fontSize: '9px', fontWeight: 700 }}>&#9675; IDLE</span>;
+  /* ─── SHARED UI ───────────────────────────── */
+  const Pill = ({s}) => {
+    const m={running:{bg:C.successBg,c:'#065F46',bc:C.success,t:'● RUNNING'},downtime:{bg:C.amberBg,c:'#92400E',bc:C.amber,t:'● DOWNTIME'},idle:{bg:'#F3F4F6',c:C.muted,bc:C.border,t:'○ IDLE'}};
+    const v=m[s]||m.idle;
+    return <span style={{background:v.bg,color:v.c,border:`1px solid ${v.bc}`,padding:'2px 6px',borderRadius:'12px',fontSize:'8px',fontWeight:700,fontFamily:FONT,letterSpacing:'0.03em',whiteSpace:'nowrap'}}>{v.t}</span>;
   };
 
-  const AndroidNav = () => (
-    <div style={{ background: '#1a1a1a', padding: '5px 0', display: 'flex', justifyContent: 'center', gap: '52px' }}>
-      <span style={{ color: '#888', fontSize: '14px', cursor: 'pointer' }} onClick={() => nav('tc')}>|||</span>
-      <span style={{ color: '#888', fontSize: '16px', cursor: 'pointer' }} onClick={() => nav('tc')}>&#9675;</span>
-      <span style={{ color: '#888', fontSize: '14px', cursor: 'pointer' }} onClick={() => nav('tc')}>&#8249;</span>
-    </div>
-  );
-
-  const Header = ({ user, id }) => (
-    <div style={{ background: NAVY, padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <div style={{ width: '32px', height: '32px', background: 'white', borderRadius: '5px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1.1 }}>
-          <span style={{ fontSize: '5.5px', fontWeight: 800, color: NAVY }}>DIGI</span><span style={{ fontSize: '5.5px', fontWeight: 800, color: NAVY }}>fleet</span>
+  const Hdr = () => (
+    <div style={{background:C.navy,padding:'7px 12px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+      <div style={{display:'flex',alignItems:'center',gap:'7px'}}>
+        <div style={{width:'28px',height:'28px',background:'white',borderRadius:'4px',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',lineHeight:1}}>
+          <span style={{fontSize:'5px',fontWeight:900,color:C.navy,fontFamily:FONT}}>DIGI</span><span style={{fontSize:'5px',fontWeight:900,color:C.navy,fontFamily:FONT}}>fleet</span>
         </div>
+        <div style={{color:'white',fontSize:'10px',fontWeight:600,fontFamily:FONT}}>TC Dashboard</div>
       </div>
-      <div style={{ textAlign: 'right', color: 'white' }}>
-        <div style={{ fontSize: '12px', fontWeight: 600 }}>{user}</div>
-        <div style={{ fontSize: '10px', opacity: 0.65 }}>{id}</div>
-      </div>
+      <div style={{textAlign:'right',color:'white'}}><div style={{fontSize:'10px',fontWeight:600,fontFamily:FONT}}>Jekson</div><div style={{fontSize:'8px',opacity:0.6,fontFamily:MONO}}>TC-20031492</div></div>
     </div>
   );
 
-  const MhCard = ({ unit }) => {
+  const Nav = () => (
+    <div style={{background:'#111',padding:'4px 0',display:'flex',justifyContent:'center',gap:'52px'}}>
+      <span style={{color:'#555',fontSize:'12px',cursor:'pointer'}} onClick={()=>nav('tc')}>|||</span>
+      <span style={{color:'#555',fontSize:'14px',cursor:'pointer'}} onClick={()=>nav('tc')}>○</span>
+      <span style={{color:'#555',fontSize:'12px',cursor:'pointer'}} onClick={()=>nav('tc')}>‹</span>
+    </div>
+  );
+
+  const Back = ({label}) => <span onClick={()=>nav('tc')} style={{color:'white',fontSize:'14px',cursor:'pointer',marginRight:'6px'}}>←</span>;
+  const FormHdr = ({title,sub}) => (
+    <div style={{background:C.navy,padding:'9px 12px',display:'flex',alignItems:'center'}}>
+      <Back/><div><div style={{color:'white',fontWeight:700,fontSize:'13px',fontFamily:FONT}}>{title}</div>{sub&&<div style={{color:'#7B93DB',fontSize:'9px',fontFamily:FONT}}>{sub}</div>}</div>
+    </div>
+  );
+
+  /* ─── MH CARD ─────────────────────────────── */
+  const MhCard = ({u}) => {
+    const hasLoad = !!u.load;
+    const canLoad = u.status==='running' && u.queue.length>0 && !hasLoad;
     return (
-      <div style={{ borderRadius: '8px', overflow: 'hidden', border: `1px solid ${BORDER}`, flex: '0 0 260px', minWidth: '260px', display: 'flex', flexDirection: 'column', background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-        
-        {/* Barge Section (Clickable) */}
-        <div onClick={() => nav('barge', unit.id)} style={{ background: '#F8FAFC', padding: '8px 10px', textAlign: 'center', borderBottom: `1px solid ${BORDER}`, cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={e=>e.currentTarget.style.background='#F1F5F9'} onMouseLeave={e=>e.currentTarget.style.background='#F8FAFC'}>
-          <div style={{ fontSize: '16px' }}>&#128674;</div>
-          <div style={{ fontSize: '10px', color: NAVY, fontWeight: 600, marginTop: '2px' }}>{unit.barge}</div>
-          <div style={{ fontSize: '8px', color: MUTED }}>Click to manage barge</div>
+      <div style={{borderRadius:'8px',overflow:'hidden',border:`1px solid ${C.border}`,flex:'0 0 190px',minWidth:'190px',display:'flex',flexDirection:'column',background:C.card,boxShadow:'0 1px 4px rgba(0,0,0,0.06)',fontFamily:FONT}}>
+        {/* Barge header */}
+        <div onClick={()=>nav('barge',u.id)} style={{background:'#F8FAFC',padding:'6px 8px',textAlign:'center',borderBottom:`1px solid ${C.border}`,cursor:'pointer',transition:'background 0.15s'}} onMouseEnter={e=>e.currentTarget.style.background='#EEF2FF'} onMouseLeave={e=>e.currentTarget.style.background='#F8FAFC'}>
+          <div style={{fontSize:'14px'}}>🚢</div>
+          <div style={{fontSize:'9px',color:C.navyLt,fontWeight:700,marginTop:'1px'}}>{u.barge||'No barge attached'}</div>
+          <div style={{fontSize:'7px',color:C.label}}>tap to manage barge</div>
         </div>
-        
-        {/* MH Section */}
-        <div style={{ padding: '10px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-            <div style={{ fontWeight: 800, fontSize: '14px', color: NAVY }}>{unit.id}</div>
-            <StatusPill status={unit.status} />
+        {/* LP body — clickable */}
+        <div onClick={()=>lpClick(u)} style={{padding:'8px 9px',cursor:'pointer',flex:1,borderBottom:`1px solid ${C.border}`,transition:'background 0.15s'}} onMouseEnter={e=>e.currentTarget.style.background='#FAFBFF'} onMouseLeave={e=>e.currentTarget.style.background='white'}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'4px'}}>
+            <div style={{display:'flex',alignItems:'baseline',gap:'4px'}}>
+              <span style={{fontWeight:900,fontSize:'16px',color:C.navyLt,fontFamily:MONO}}>{u.lp}</span>
+              <span style={{fontWeight:600,fontSize:'10px',color:C.muted}}>{u.id}</span>
+            </div>
+            <Pill s={u.status}/>
           </div>
-          <div style={{ fontSize: '10px', color: MUTED, marginBottom: '2px' }}>&#8599; {unit.jetty}</div>
-          <div style={{ fontSize: '10px', color: MUTED, marginBottom: '8px' }}>&#128100; Operator: <strong>{unit.op}</strong></div>
-          
-          <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
-            <button onClick={() => nav('downtime', unit.id)} style={{ flex: 1, background: 'white', border: `1px solid ${BORDER}`, color: MUTED, fontSize: '9px', fontWeight: 600, padding: '4px 0', borderRadius: '4px', cursor: 'pointer' }}>DOWNTIME</button>
-            <button onClick={() => nav('ts', unit.id)} style={{ flex: 1, background: 'white', border: `1px solid ${BORDER}`, color: MUTED, fontSize: '9px', fontWeight: 600, padding: '4px 0', borderRadius: '4px', cursor: 'pointer' }}>TIMESHEET</button>
+          <div style={{fontSize:'9px',color:C.muted,marginBottom:'1px'}}>↗ {u.jetty}</div>
+          <div style={{fontSize:'9px',color:C.muted}}>👤 <strong style={{color:C.text}}>{u.op}</strong></div>
+          {hasLoad && <div style={{marginTop:'4px',fontSize:'8px',padding:'3px 6px',background:C.successBg,border:`1px solid ${C.success}`,borderRadius:'4px',color:'#065F46',fontWeight:700}}>⏳ Loading: {u.load.truckId} ({fmtT(u.load.startTime)})</div>}
+          <div style={{fontSize:'7px',color:C.label,marginTop:'4px',fontStyle:'italic'}}>tap to {u.status==='idle'?'start sequence':u.status==='running'?'end sequence':'end downtime'}</div>
+        </div>
+        {/* Truck queue */}
+        <div style={{background:'#F8FAFC',padding:'6px 8px',borderBottom:`1px solid ${C.border}`}}>
+          <div style={{fontSize:'8px',fontWeight:700,color:C.muted,marginBottom:'4px',display:'flex',justifyContent:'space-between'}}>
+            <span>TRUCK QUEUE ({u.queue.length})</span>
+            <span onClick={e=>{e.stopPropagation();nav('trucks',u.id)}} style={{color:C.teal,cursor:'pointer',fontWeight:700}}>+ Assign</span>
           </div>
-
-          {/* Combined Start/Stop Sequence Button */}
-          {unit.status === 'running' ? (
-            <button onClick={() => nav('stop', unit.id)} style={{ width: '100%', background: '#FEE2E2', color: DANGER, border: `1px solid #FCA5A5`, fontSize: '10px', fontWeight: 700, padding: '6px 0', borderRadius: '4px', cursor: 'pointer' }}>STOP SEQ (Loading)</button>
-          ) : (
-             <button onClick={() => nav('start', unit.id)} style={{ width: '100%', background: NAVY, color: 'white', border: 'none', fontSize: '10px', fontWeight: 700, padding: '6px 0', borderRadius: '4px', cursor: 'pointer', opacity: unit.queue.length === 0 ? 0.5 : 1 }} disabled={unit.queue.length === 0}>
-               {unit.queue.length === 0 ? 'NO TRUCKS IN QUEUE' : 'START SEQ'}
-             </button>
+          <div style={{display:'flex',gap:'3px',flexWrap:'wrap',minHeight:'18px'}}>
+            {u.queue.length===0?<span style={{fontSize:'8px',color:'#9CA3AF',fontStyle:'italic'}}>Empty</span>:
+            u.queue.map((t,i)=>{
+              const active=i===0&&hasLoad;
+              return <div key={i} style={{background:active?C.success:'white',color:active?'white':C.text,border:`1px solid ${active?C.success:C.border}`,borderRadius:'3px',padding:'1px 4px',fontSize:'8px',fontWeight:600,fontFamily:MONO}}>🚛{t}</div>;
+            })}
+          </div>
+        </div>
+        {/* Action buttons */}
+        <div style={{padding:'6px 8px',display:'flex',flexDirection:'column',gap:'4px'}}>
+          {u.status==='running' && !hasLoad && (
+            <button onClick={e=>{e.stopPropagation();nav('startLoad',u.id)}} disabled={u.queue.length===0} style={sBtn(C.navyLt,'white',{opacity:u.queue.length===0?0.4:1})}>{u.queue.length===0?'NO TRUCKS':'▶ START LOADING'}</button>
           )}
-
-        </div>
-
-        {/* Truck Queue Section */}
-        <div style={{ background: '#F8FAFC', borderTop: `1px solid ${BORDER}`, padding: '8px 10px' }}>
-          <div style={{ fontSize: '9px', fontWeight: 700, color: MUTED, marginBottom: '6px', display: 'flex', justifyContent: 'space-between' }}>
-            <span>TRUCK QUEUE ({unit.queue.length})</span>
-            <span onClick={() => nav('trucks', unit.id)} style={{ color: TEAL, cursor: 'pointer' }}>+ Assign</span>
-          </div>
-          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', minHeight: '22px' }}>
-            {unit.queue.length === 0 ? (
-              <span style={{ fontSize: '9px', color: '#9CA3AF', fontStyle: 'italic' }}>Empty queue</span>
-            ) : (
-              unit.queue.map((t, idx) => (
-                <div key={idx} style={{ background: idx === 0 && unit.status === 'running' ? SUCCESS : 'white', color: idx === 0 && unit.status === 'running' ? 'white' : TEXT, border: `1px solid ${idx === 0 && unit.status === 'running' ? SUCCESS : BORDER}`, borderRadius: '3px', padding: '2px 4px', fontSize: '9px', fontWeight: 600 }}>
-                  &#128666; {t}
-                </div>
-              ))
-            )}
+          {u.status==='running' && hasLoad && (
+            <button onClick={e=>{e.stopPropagation();nav('finishLoad',u.id)}} style={sBtn(C.danger,'white')}>■ FINISH LOADING</button>
+          )}
+          {u.status==='downtime' && (
+            <button onClick={e=>{e.stopPropagation();lpClick(u)}} style={sBtn(C.amber,'white')}>END DOWNTIME</button>
+          )}
+          <div style={{display:'flex',gap:'4px'}}>
+            {u.status==='running' && <button onClick={e=>{e.stopPropagation();nav('startDt',u.id)}} style={sBtn('white',C.muted,{border:`1px solid ${C.border}`,flex:1,padding:'5px 0',fontSize:'8px'})}>DOWNTIME</button>}
+            <button onClick={e=>{e.stopPropagation();nav('ts',u.id)}} style={sBtn('white',C.muted,{border:`1px solid ${C.border}`,flex:1,padding:'5px 0',fontSize:'8px'})}>TIMESHEET</button>
           </div>
         </div>
-
       </div>
     );
   };
+
+  /* ═══════════════════════════  SCREENS  ═══════════════════════════ */
 
   const ScreenTC = () => {
-    const activeRunning = units.filter(u => u.status === 'running').length;
+    const running=units.filter(u=>u.status==='running').length;
+    const barges=units.filter(u=>u.barge).length;
     return (
-      <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} style={{ flex: 1, overflow: 'auto', background: GRAY, display: 'flex', flexDirection: 'column' }}>
-        
-        {/* Top Summary Bar */}
-        <div style={{ background: 'white', borderBottom: `1px solid ${BORDER}`, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', gap: '16px' }}>
-            <div>
-              <div style={{ fontSize: '9px', color: MUTED, fontWeight: 600, textTransform: 'uppercase' }}>Active Units</div>
-              <div style={{ fontSize: '14px', fontWeight: 800, color: NAVY }}>{activeRunning} <span style={{ fontSize: '10px', color: MUTED, fontWeight: 500 }}>/ {units.length}</span></div>
-            </div>
-            <div>
-              <div style={{ fontSize: '9px', color: MUTED, fontWeight: 600, textTransform: 'uppercase' }}>Barges</div>
-              <div style={{ fontSize: '14px', fontWeight: 800, color: NAVY }}>4</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '9px', color: MUTED, fontWeight: 600, textTransform: 'uppercase' }}>Est. Rate</div>
-              <div style={{ fontSize: '14px', fontWeight: 800, color: NAVY }}>1,250 <span style={{ fontSize: '10px', color: MUTED, fontWeight: 500 }}>T/hr</span></div>
-            </div>
+      <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} style={{flex:1,overflow:'hidden',background:C.bg,display:'flex',flexDirection:'column',fontFamily:FONT}}>
+        {/* Summary bar */}
+        <div style={{background:'white',borderBottom:`1px solid ${C.border}`,padding:'8px 12px',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0}}>
+          <div style={{display:'flex',gap:'14px'}}>
+            {[['Active',`${running}/${units.length}`],['Barges',barges],['Est. Rate','1,250 T/hr']].map(([k,v])=>(
+              <div key={k}><div style={{fontSize:'8px',color:C.muted,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.05em'}}>{k}</div><div style={{fontSize:'13px',fontWeight:800,color:C.navyLt,fontFamily:MONO}}>{v}</div></div>
+            ))}
           </div>
-          <button onClick={() => nav('trucks')} style={{ background: TEAL, color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '10px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 4px rgba(10, 191, 222, 0.2)' }}>
-            INCOMING TRUCKS ({incomingTrucks.length})
+          <button onClick={()=>nav('trucks')} style={{background:C.teal,color:'white',border:'none',padding:'6px 10px',borderRadius:'5px',fontSize:'9px',fontWeight:700,cursor:'pointer',fontFamily:FONT,boxShadow:'0 2px 6px rgba(10,191,222,0.25)'}}>
+            INCOMING TRUCKS ({trucks.length})
           </button>
         </div>
-
-        <div style={{ padding: '12px', display: 'flex', gap: '12px', flexWrap: 'nowrap', overflowX: 'auto', overflowY: 'hidden', minHeight: 0 }}>
-          {units.map(u => <MhCard key={u.id} unit={u} />)}
+        {/* Cards row */}
+        <div style={{padding:'10px',display:'flex',gap:'10px',flexWrap:'nowrap',overflowX:'auto',overflowY:'hidden',flex:1,alignItems:'flex-start'}}>
+          {units.map(u=><MhCard key={u.id} u={u}/>)}
         </div>
       </motion.div>
     );
   };
 
-  const ScreenDowntime = () => {
-    const unit = getUnit();
+  const ScreenStartSeq = () => {
+    const u=gu(); const [op,setOp]=useState(OPERATORS[0]); const [t,setT]=useState(now()); const [hm,setHm]=useState(u.hm); const [fm,setFm]=useState(u.fm);
     return (
-      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1, overflow: 'auto', background: GRAY, padding: '10px' }}>
-        <div style={{ background: 'white', borderRadius: '8px', border: `1px solid ${BORDER}`, overflow: 'hidden', maxWidth: '520px', margin: '0 auto' }}>
-          <div style={{ background: NAVY, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-             <span onClick={() => nav('tc')} style={{ color: 'white', fontSize: '16px', cursor: 'pointer' }}>&#8592;</span>
-             <div><div style={{ color: 'white', fontWeight: 700, fontSize: '14px' }}>Log Downtime</div><div style={{ color: '#aac4ff', fontSize: '10px' }}>{unit.id} — {unit.jetty}</div></div>
-          </div>
-          <div style={{ padding: '14px' }}>
-            <div style={{ marginBottom: '13px' }}>
-              <div style={{ fontSize: '10px', color: MUTED, marginBottom: '6px' }}>Category <span style={{ color: DANGER }}>*</span></div>
-              {["Daily Maintenance", "Preventive Service", "Urgent Repair"].map((c, i) => (
-                <label key={c} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 11px', borderRadius: '6px', border: `1px solid ${i === 0 ? NAVY : BORDER}`, background: i === 0 ? "#EFF3FF" : "white", marginBottom: '5px', cursor: 'pointer' }}>
-                  <div style={{ width: '15px', height: '15px', borderRadius: '50%', border: `2px solid ${i === 0 ? NAVY : "#d1d5db"}`, background: i === 0 ? NAVY : "white", display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    {i === 0 && <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'white' }}></div>}
-                  </div>
-                  <span style={{ fontSize: '12px', color: i === 0 ? NAVY : TEXT, fontWeight: i === 0 ? 600 : 400 }}>{c}</span>
-                </label>
-              ))}
+      <motion.div initial={{opacity:0,x:20}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-20}} style={{flex:1,overflow:'auto',background:C.bg,padding:'8px',fontFamily:FONT}}>
+        <div style={{background:'white',borderRadius:'8px',border:`1px solid ${C.border}`,overflow:'hidden',maxWidth:'480px',margin:'0 auto'}}>
+          <FormHdr title="Start Sequence" sub={`${u.id} · ${u.lp} — Pair Operator & MH`}/>
+          <div style={{padding:'12px'}}>
+            <div style={sField}><div style={sLabel}>Operator *</div><select value={op} onChange={e=>setOp(e.target.value)} style={sInput()}>{OPERATORS.map(o=><option key={o} value={o}>{o}</option>)}</select></div>
+            <div style={sField}><div style={sLabel}>Start Timestamp *</div><input type="datetime-local" value={t} onChange={e=>setT(e.target.value)} style={sInput()}/></div>
+            <div style={{display:'flex',gap:'8px',...sField}}>
+              <div style={{flex:1}}><div style={sLabel}>HM Start (hours) *</div><input type="number" value={hm} onChange={e=>setHm(e.target.value)} style={sInput()}/></div>
+              <div style={{flex:1}}><div style={sLabel}>FM Start (litres) *</div><input type="number" value={fm} onChange={e=>setFm(e.target.value)} style={sInput()}/></div>
             </div>
-            <button onClick={() => { updateUnitStatus(unit.id, 'downtime'); nav('tc'); }} style={{ width: '100%', background: NAVY, color: 'white', border: 'none', borderRadius: '6px', padding: '12px 0', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>SAVE & SET TO DOWNTIME</button>
+            <button onClick={()=>doStartSeq(u.id,op,t,hm,fm)} style={sBtn(C.success,'white',{fontSize:'13px',padding:'11px 0'})}>START SEQUENCE</button>
           </div>
         </div>
       </motion.div>
     );
   };
 
-  const ScreenStart = () => {
-    const unit = getUnit();
-    const firstTruck = unit.queue[0] || "Unknown";
+  const ScreenEndSeq = () => {
+    const u=gu(); const [t,setT]=useState(now()); const [hm,setHm]=useState(u.hm); const [fm,setFm]=useState(u.fm);
     return (
-      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1, overflow: 'auto', background: GRAY, padding: '10px' }}>
-        <div style={{ background: 'white', borderRadius: '8px', border: `1px solid ${BORDER}`, overflow: 'hidden', maxWidth: '520px', margin: '0 auto' }}>
-          <div style={{ background: NAVY, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span onClick={() => nav('tc')} style={{ color: 'white', fontSize: '16px', cursor: 'pointer' }}>&#8592;</span>
-            <div><div style={{ color: 'white', fontWeight: 700, fontSize: '14px' }}>Start Sequence</div><div style={{ color: '#aac4ff', fontSize: '10px' }}>{unit.id} — Loading Truck {firstTruck}</div></div>
-          </div>
-          <div style={{ padding: '14px' }}>
-             <div style={{ marginBottom: '13px' }}>
-              <div style={{ fontSize: '10px', color: MUTED, marginBottom: '4px' }}>Operator <span style={{ color: DANGER }}>*</span></div>
-              <div style={{ background: 'white', border: `1px solid ${BORDER}`, borderRadius: '6px', padding: '9px 11px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>&#128100;</div>
-                  <div><div style={{ fontSize: '13px', fontWeight: 600 }}>Amrojali</div><div style={{ fontSize: '9px', color: MUTED }}>OPERATOR_MH</div></div>
-                </div>
-                <span style={{ color: MUTED }}>&#9660;</span>
-              </div>
+      <motion.div initial={{opacity:0,x:20}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-20}} style={{flex:1,overflow:'auto',background:C.bg,padding:'8px',fontFamily:FONT}}>
+        <div style={{background:'white',borderRadius:'8px',border:`1px solid ${C.border}`,overflow:'hidden',maxWidth:'480px',margin:'0 auto'}}>
+          <FormHdr title="End Sequence" sub={`${u.id} · ${u.lp} — Unpair ${u.op}`}/>
+          <div style={{padding:'12px'}}>
+            {u.seq && <div style={{background:C.successBg,border:`1px solid ${C.success}`,borderRadius:'6px',padding:'8px 10px',marginBottom:'12px',fontSize:'10px',color:'#065F46'}}>
+              <strong>Active since {fmtDT(u.seq.startTime)}</strong><br/>Operator: {u.seq.op} · HM: {u.seq.hmStart} · FM: {u.seq.fmStart}<br/>Loads completed: {u.seq.loads.length}
+            </div>}
+            <div style={sField}><div style={sLabel}>End Timestamp *</div><input type="datetime-local" value={t} onChange={e=>setT(e.target.value)} style={sInput()}/></div>
+            <div style={{display:'flex',gap:'8px',...sField}}>
+              <div style={{flex:1}}><div style={sLabel}>HM Finish *</div><input type="number" value={hm} onChange={e=>setHm(e.target.value)} style={sInput()}/></div>
+              <div style={{flex:1}}><div style={sLabel}>FM Finish *</div><input type="number" value={fm} onChange={e=>setFm(e.target.value)} style={sInput()}/></div>
             </div>
-            <div style={{ marginBottom: '13px' }}>
-              <div style={{ fontSize: '10px', color: MUTED, marginBottom: '4px' }}>HM Start — Hour Meter reading <span style={{ color: DANGER }}>*</span></div>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <div style={{ flex: 1, background: 'white', border: `1.5px solid ${NAVY}`, borderRadius: '6px', padding: '9px 11px', fontSize: '16px', fontWeight: 700, color: NAVY }}>1,205</div>
-                <span style={{ fontSize: '12px', color: MUTED }}>hours</span>
-              </div>
-            </div>
-            <button onClick={() => { updateUnitStatus(unit.id, 'running', 'Amrojali'); nav('tc'); }} style={{ width: '100%', background: SUCCESS, color: 'white', border: 'none', borderRadius: '6px', padding: '12px 0', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>START LOADING: {firstTruck}</button>
+            <button onClick={()=>doEndSeq(u.id,t,hm,fm)} style={sBtn(C.danger,'white',{fontSize:'13px',padding:'11px 0'})}>END SEQUENCE & UNPAIR</button>
           </div>
         </div>
       </motion.div>
     );
   };
 
-  const ScreenStop = () => {
-    const unit = getUnit();
-    const activeTruck = unit.queue[0] || "Unknown";
+  const ScreenStartLoad = () => {
+    const u=gu(); const truck=u.queue[0]||'—'; const [t,setT]=useState(now());
     return (
-      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1, overflow: 'auto', background: GRAY, padding: '10px' }}>
-        <div style={{ background: 'white', borderRadius: '8px', border: `1px solid ${BORDER}`, overflow: 'hidden', maxWidth: '520px', margin: '0 auto' }}>
-          <div style={{ background: NAVY, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span onClick={() => nav('tc')} style={{ color: 'white', fontSize: '16px', cursor: 'pointer' }}>&#8592;</span>
-            <div><div style={{ color: 'white', fontWeight: 700, fontSize: '14px' }}>Stop Sequence</div><div style={{ color: '#aac4ff', fontSize: '10px' }}>{unit.id} — Loading {activeTruck}</div></div>
-          </div>
-          <div style={{ padding: '14px' }}>
-            <div style={{ background: '#ECFDF5', border: `1px solid ${SUCCESS}`, borderRadius: '6px', padding: '9px 11px', marginBottom: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div><div style={{ fontSize: '12px', color: '#065F46', fontWeight: 700 }}>&#9679; Active — {unit.op}</div><div style={{ fontSize: '10px', color: '#047857', marginTop: '1px' }}>Started: 08:30 &nbsp;&#183;&nbsp; Running: 45m</div></div>
+      <motion.div initial={{opacity:0,x:20}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-20}} style={{flex:1,overflow:'auto',background:C.bg,padding:'8px',fontFamily:FONT}}>
+        <div style={{background:'white',borderRadius:'8px',border:`1px solid ${C.border}`,overflow:'hidden',maxWidth:'480px',margin:'0 auto'}}>
+          <FormHdr title="Start Loading" sub={`${u.id} · ${u.lp} — Truck ${truck}`}/>
+          <div style={{padding:'12px'}}>
+            <div style={{background:'#F0F9FF',border:'1px solid #BAE6FD',borderRadius:'6px',padding:'10px',marginBottom:'12px',display:'flex',alignItems:'center',gap:'10px'}}>
+              <span style={{fontSize:'24px'}}>🚛</span>
+              <div><div style={{fontSize:'14px',fontWeight:700,color:C.navyLt,fontFamily:MONO}}>{truck}</div><div style={{fontSize:'9px',color:C.muted}}>Next in queue · Position 1 of {u.queue.length}</div></div>
             </div>
-             <div style={{ border: `1px solid ${BORDER}`, borderRadius: '6px', overflow: 'hidden', marginBottom: '13px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr 1fr', background: GRAY }}>
-                <div style={{ padding: '7px 9px', fontSize: '10px', color: MUTED, fontWeight: 600 }}></div>
-                <div style={{ padding: '7px 9px', fontSize: '10px', color: MUTED, fontWeight: 600, borderLeft: `1px solid ${BORDER}`, textAlign: 'center' }}>START (locked)</div>
-                <div style={{ padding: '7px 9px', fontSize: '10px', color: MUTED, fontWeight: 600, borderLeft: `1px solid ${BORDER}`, textAlign: 'center' }}>FINISH</div>
-              </div>
-              {[["HM (hours)", "1,205", "1,206"], ["FM (litres)", "4,820", "4,835"]].map(([lbl, s, f], idx) => (
-                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '110px 1fr 1fr', borderTop: `1px solid ${BORDER}` }}>
-                  <div style={{ padding: '9px', fontSize: '11px', color: TEXT, fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>{lbl}</div>
-                  <div style={{ padding: '9px', borderLeft: `1px solid ${BORDER}`, background: '#F9FAFB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: '14px', fontWeight: 600, color: MUTED }}>{s}</span></div>
-                  <div style={{ padding: '6px', borderLeft: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ background: 'white', border: `1.5px solid ${NAVY}`, borderRadius: '5px', padding: '6px 10px', fontSize: '14px', fontWeight: 700, color: NAVY, minWidth: '65px', textAlign: 'center' }}>{f}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button onClick={() => { 
-              // Stop sequence logic: set to idle, pop the truck from queue
-              setUnits(prev => prev.map(u => {
-                if(u.id === unit.id) return { ...u, status: 'idle', queue: u.queue.slice(1) };
-                return u;
-              }));
-              nav('tc'); 
-            }} style={{ width: '100%', background: DANGER, color: 'white', border: 'none', borderRadius: '6px', padding: '12px 0', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>STOP & DISMISS TRUCK</button>
+            <div style={sField}><div style={sLabel}>Start Timestamp *</div><input type="datetime-local" value={t} onChange={e=>setT(e.target.value)} style={sInput()}/></div>
+            <button onClick={()=>doStartLoad(u.id,t)} style={sBtn(C.success,'white',{fontSize:'13px',padding:'11px 0'})}>▶ START LOADING: {truck}</button>
           </div>
         </div>
       </motion.div>
     );
   };
 
-  const ScreenTS = () => {
-    let prevHm = 1205;
-    let prevFm = 4820;
-    
-    // generate fake logs based on unit id to look dynamic
-    const rows = [
-      { op: "Amrojali", s: "08:30", e: "10:45", hms: prevHm, hmf: prevHm+12, fms: prevFm, fmf: prevFm+145 },
-      { op: "Budi S.", s: "11:00", e: "13:30", hms: prevHm+12, hmf: prevHm+24, fms: prevFm+145, fmf: prevFm+292 },
-      { op: "Ricardo H.", s: "14:00", e: "16:30", hms: prevHm+24, hmf: prevHm+36, fms: prevFm+292, fmf: prevFm+438 },
-    ];
-    
-    const totalHm = rows.reduce((acc, r) => acc + (r.hmf - r.hms), 0);
-    const totalFm = rows.reduce((acc, r) => acc + (r.fmf - r.fms), 0);
-
+  const ScreenFinishLoad = () => {
+    const u=gu(); const ld=u.load; const [t,setT]=useState(now());
+    if(!ld) return <motion.div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:FONT,color:C.muted}} initial={{opacity:0}} animate={{opacity:1}}>No active loading.</motion.div>;
     return (
-      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1, overflow: 'auto', background: GRAY, padding: '10px' }}>
-        <div style={{ background: 'white', borderRadius: '8px', border: `1px solid ${BORDER}`, overflow: 'hidden' }}>
-          <div style={{ background: NAVY, padding: '9px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span onClick={() => nav('tc')} style={{ color: 'white', fontSize: '16px', cursor: 'pointer' }}>&#8592;</span>
-            <div><div style={{ color: 'white', fontWeight: 700, fontSize: '13px' }}>Timesheet — {getUnit().id}</div><div style={{ color: '#aac4ff', fontSize: '10px' }}>13 March 2026 &nbsp;&#183;&nbsp; {rows.length} sequences</div></div>
-          </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ background: '#F9FAFB', borderBottom: `1px solid ${BORDER}` }}>
-                  <th style={{ padding: '8px' }}>Operator</th><th style={{ padding: '8px' }}>Start</th><th style={{ padding: '8px' }}>Stop</th>
-                  <th style={{ padding: '8px' }}>HM Start</th><th style={{ padding: '8px' }}>HM Finish</th><th style={{ padding: '8px' }}>&Delta; HM</th>
-                  <th style={{ padding: '8px' }}>FM Start</th><th style={{ padding: '8px' }}>FM Finish</th><th style={{ padding: '8px' }}>&Delta; FM</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r, i) => (
-                  <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#FAFAFA', borderBottom: `1px solid ${BORDER}` }}>
-                    <td style={{ padding: '8px', fontWeight: 600, color: NAVY }}>{r.op}</td>
-                    <td style={{ padding: '8px' }}>{r.s}</td><td style={{ padding: '8px' }}>{r.e}</td>
-                    <td style={{ padding: '8px' }}>{r.hms.toLocaleString()}</td><td style={{ padding: '8px' }}>{r.hmf.toLocaleString()}</td>
-                    <td style={{ padding: '8px', fontWeight: 700, color: '#0891B2' }}>{r.hmf - r.hms}h</td>
-                    <td style={{ padding: '8px' }}>{r.fms.toLocaleString()}</td><td style={{ padding: '8px' }}>{r.fmf.toLocaleString()}</td>
-                    <td style={{ padding: '8px', fontWeight: 700, color: '#0891B2' }}>{r.fmf - r.fms} L</td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr style={{ background: '#F0F9FF', borderTop: '2px solid #BAE6FD' }}>
-                  <td colSpan="5" style={{ padding: '8px', fontWeight: 700, color: '#0369A1', fontSize: '12px' }}>TOTALS</td>
-                  <td style={{ padding: '8px', fontWeight: 700, color: '#0369A1' }}>{totalHm}h</td>
-                  <td colSpan="2"></td>
-                  <td style={{ padding: '8px', fontWeight: 700, color: '#0369A1' }}>{totalFm} L</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
-      </motion.div>
-    );
-  };
-
-  const ScreenBarge = () => {
-    const unit = getUnit();
-    return (
-      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1, overflow: 'auto', background: GRAY, padding: '10px' }}>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <div style={{ flex: '1 1 240px', background: 'white', borderRadius: '8px', border: `1px solid ${BORDER}`, overflow: 'hidden' }}>
-            <div style={{ background: NAVY, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span onClick={() => nav('tc')} style={{ color: 'white', fontSize: '16px', cursor: 'pointer' }}>&#8592;</span>
-              <div><div style={{ color: 'white', fontWeight: 700, fontSize: '14px' }}>Attach Barge</div><div style={{ color: '#aac4ff', fontSize: '10px' }}>{unit.id} — {unit.jetty}</div></div>
+      <motion.div initial={{opacity:0,x:20}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-20}} style={{flex:1,overflow:'auto',background:C.bg,padding:'8px',fontFamily:FONT}}>
+        <div style={{background:'white',borderRadius:'8px',border:`1px solid ${C.border}`,overflow:'hidden',maxWidth:'480px',margin:'0 auto'}}>
+          <FormHdr title="Finish Loading" sub={`${u.id} · ${u.lp} — Truck ${ld.truckId}`}/>
+          <div style={{padding:'12px'}}>
+            <div style={{background:C.successBg,border:`1px solid ${C.success}`,borderRadius:'6px',padding:'10px',marginBottom:'12px'}}>
+              <div style={{fontSize:'11px',color:'#065F46',fontWeight:700}}>⏳ Loading in progress</div>
+              <div style={{fontSize:'10px',color:'#047857',marginTop:'2px'}}>Truck: <strong>{ld.truckId}</strong> · Started: {fmtT(ld.startTime)} · Duration: {timeDelta(ld.startTime,now())}</div>
             </div>
-            <div style={{ padding: '14px' }}>
-              <div style={{ background: '#f5f5f5', borderRadius: '6px', padding: '9px 11px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '20px' }}>&#128674;</span>
-                <div><div style={{ fontSize: '12px', fontWeight: 600 }}>BG. Glory Marine 12 / TB. HB 9</div><div style={{ fontSize: '10px', color: MUTED }}>Jumbo</div></div>
-              </div>
-              <button onClick={() => nav('tc')} style={{ width: '100%', background: NAVY, color: 'white', border: 'none', borderRadius: '6px', padding: '11px 0', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>ATTACH BARGE</button>
-            </div>
-          </div>
-          
-          <div style={{ flex: '1 1 240px', background: 'white', borderRadius: '8px', border: `1px solid ${SUCCESS}`, overflow: 'hidden' }}>
-            <div style={{ background: NAVY, padding: '10px 14px' }}>
-              <div><div style={{ color: 'white', fontWeight: 700, fontSize: '14px' }}>Current Barge Status</div><div style={{ color: '#aac4ff', fontSize: '10px' }}>{unit.id}</div></div>
-            </div>
-            <div style={{ padding: '14px' }}>
-              <div style={{ background: '#ECFDF5', border: `1px solid ${SUCCESS}`, borderRadius: '6px', padding: '9px 11px', marginBottom: '12px' }}>
-                <div style={{ fontSize: '12px', color: '#065F46', fontWeight: 700 }}>&#9679; ATTACHED since 08:00</div>
-                <div style={{ fontSize: '11px', color: '#047857', marginTop: '2px' }}>{unit.barge}</div>
-                <div style={{ fontSize: '11px', color: '#047857' }}>Running duration: 2h 30m</div>
-              </div>
-              <button onClick={() => nav('tc')} style={{ width: '100%', background: DANGER, color: 'white', border: 'none', borderRadius: '6px', padding: '11px 0', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>DETACH BARGE</button>
-            </div>
+            <div style={sField}><div style={sLabel}>Finish Timestamp *</div><input type="datetime-local" value={t} onChange={e=>setT(e.target.value)} style={sInput()}/></div>
+            <button onClick={()=>doFinishLoad(u.id,t)} style={sBtn(C.danger,'white',{fontSize:'13px',padding:'11px 0'})}>■ FINISH LOADING: {ld.truckId}</button>
           </div>
         </div>
       </motion.div>
@@ -375,126 +342,217 @@ export default function MobileMockup() {
   };
 
   const ScreenTrucks = () => {
-    const unit = getUnit();
-    // Re-usable screen. If activeUnitId is set, we are assigning to that unit.
-    // If activeUnitId is null, we are just looking at the global pool.
-    return (
-      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1, overflow: 'auto', background: GRAY, padding: '10px' }}>
-        <div style={{ background: 'white', borderRadius: '8px', border: `1px solid ${BORDER}`, overflow: 'hidden', maxWidth: '520px', margin: '0 auto' }}>
-           <div style={{ background: NAVY, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span onClick={() => nav('tc')} style={{ color: 'white', fontSize: '16px', cursor: 'pointer' }}>&#8592;</span>
-            <div>
-              <div style={{ color: 'white', fontWeight: 700, fontSize: '14px' }}>Incoming Trucks</div>
-              <div style={{ color: '#aac4ff', fontSize: '10px' }}>{activeUnitId ? `Assign to ${unit.id}` : 'Global Port Queue'}</div>
-            </div>
-          </div>
-          <div style={{ padding: '14px' }}>
-            <p style={{ fontSize: '11px', color: MUTED, marginBottom: '12px' }}>
-              {activeUnitId ? `Click a truck to assign it to the queue for ${unit.id}.` : `These trucks are currently en route to the port.`}
-            </p>
-            {incomingTrucks.length === 0 ? (
-               <div style={{ padding: '20px', textAlign: 'center', fontSize: '12px', color: MUTED, background: '#F8FAFC', borderRadius: '6px' }}>
-                 No incoming trucks at the moment.
-               </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {incomingTrucks.map(t => (
-                  <div key={t} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', border: `1px solid ${BORDER}`, borderRadius: '6px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                       <span style={{ fontSize: '16px' }}>&#128666;</span>
-                       <span style={{ fontSize: '13px', fontWeight: 600, color: NAVY }}>{t}</span>
-                    </div>
-                    {activeUnitId && (
-                      <button onClick={() => assignTruck(t, unit.id)} style={{ background: TEAL, color: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', fontSize: '10px', fontWeight: 700, cursor: 'pointer' }}>ASSIGN &#8594;</button>
-                    )}
-                  </div>
+    if(pickTruck){
+      // Step 2: Pick LP
+      return (
+        <motion.div initial={{opacity:0,x:20}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-20}} style={{flex:1,overflow:'auto',background:C.bg,padding:'8px',fontFamily:FONT}}>
+          <div style={{background:'white',borderRadius:'8px',border:`1px solid ${C.border}`,overflow:'hidden',maxWidth:'480px',margin:'0 auto'}}>
+            <FormHdr title="Select Loading Point" sub={`Assigning truck ${pickTruck}`}/>
+            <div style={{padding:'12px'}}>
+              <p style={{fontSize:'10px',color:C.muted,marginBottom:'10px'}}>Choose which Loading Point to assign <strong>{pickTruck}</strong> to:</p>
+              <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
+                {units.map(u=>(
+                  <button key={u.id} onClick={()=>doAssign(pickTruck,u.id)} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 12px',border:`1px solid ${C.border}`,borderRadius:'6px',background:'white',cursor:'pointer',fontFamily:FONT,fontSize:'12px',textAlign:'left'}}>
+                    <div><strong style={{color:C.navyLt,fontFamily:MONO}}>{u.lp}</strong> <span style={{color:C.muted}}>· {u.id}</span></div>
+                    <div style={{fontSize:'9px',color:C.muted}}>Queue: {u.queue.length} · <Pill s={u.status}/></div>
+                  </button>
                 ))}
               </div>
-            )}
+              <button onClick={()=>setPickTruck(null)} style={{...sBtn('#F3F4F6',C.muted,{border:`1px solid ${C.border}`,marginTop:'10px'})}}>← Back to truck list</button>
+            </div>
+          </div>
+        </motion.div>
+      );
+    }
+    // Step 1: Pick truck
+    return (
+      <motion.div initial={{opacity:0,x:20}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-20}} style={{flex:1,overflow:'auto',background:C.bg,padding:'8px',fontFamily:FONT}}>
+        <div style={{background:'white',borderRadius:'8px',border:`1px solid ${C.border}`,overflow:'hidden',maxWidth:'480px',margin:'0 auto'}}>
+          <FormHdr title="Incoming Trucks" sub={`${trucks.length} trucks en route to port`}/>
+          <div style={{padding:'12px'}}>
+            {trucks.length===0?<div style={{padding:'20px',textAlign:'center',fontSize:'11px',color:C.muted,background:'#F8FAFC',borderRadius:'6px'}}>No incoming trucks.</div>:
+            <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
+              {trucks.map(t=>(
+                <div key={t} onClick={()=>setPickTruck(t)} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 12px',border:`1px solid ${C.border}`,borderRadius:'6px',cursor:'pointer',transition:'background 0.15s'}} onMouseEnter={e=>e.currentTarget.style.background='#F0FDFA'} onMouseLeave={e=>e.currentTarget.style.background='white'}>
+                  <div style={{display:'flex',alignItems:'center',gap:'8px'}}><span style={{fontSize:'16px'}}>🚛</span><span style={{fontSize:'13px',fontWeight:700,color:C.navyLt,fontFamily:MONO}}>{t}</span></div>
+                  <span style={{fontSize:'9px',color:C.teal,fontWeight:700}}>ASSIGN →</span>
+                </div>
+              ))}
+            </div>}
           </div>
         </div>
       </motion.div>
     );
   };
 
+  const ScreenStartDt = () => {
+    const u=gu(); const [cat,setCat]=useState(DT_CATS[0]); const [t,setT]=useState(now()); const [hm,setHm]=useState(u.hm); const [fm,setFm]=useState(u.fm);
+    return (
+      <motion.div initial={{opacity:0,x:20}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-20}} style={{flex:1,overflow:'auto',background:C.bg,padding:'8px',fontFamily:FONT}}>
+        <div style={{background:'white',borderRadius:'8px',border:`1px solid ${C.border}`,overflow:'hidden',maxWidth:'480px',margin:'0 auto'}}>
+          <FormHdr title="Start Downtime" sub={`${u.id} · ${u.lp} — Will auto-end current sequence`}/>
+          <div style={{padding:'12px'}}>
+            {u.seq && <div style={{background:C.amberBg,border:`1px solid ${C.amber}`,borderRadius:'6px',padding:'8px',marginBottom:'10px',fontSize:'9px',color:'#92400E'}}>
+              <strong>⚠️ Warning:</strong> This will automatically end the current Timesheet Sequence for <strong>{u.seq.op}</strong> using the HM/FM values below.
+            </div>}
+            <div style={sField}><div style={sLabel}>Category *</div>
+              {DT_CATS.map((c,i)=>(
+                <label key={c} onClick={()=>setCat(c)} style={{display:'flex',alignItems:'center',gap:'8px',padding:'6px 10px',borderRadius:'5px',border:`1px solid ${cat===c?C.navyLt:C.border}`,background:cat===c?'#EFF3FF':'white',marginBottom:'4px',cursor:'pointer',fontSize:'11px',color:cat===c?C.navyLt:C.text,fontWeight:cat===c?600:400}}>
+                  <div style={{width:'14px',height:'14px',borderRadius:'50%',border:`2px solid ${cat===c?C.navyLt:'#d1d5db'}`,background:cat===c?C.navyLt:'white',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{cat===c&&<div style={{width:'4px',height:'4px',borderRadius:'50%',background:'white'}}/>}</div>
+                  {c}
+                </label>
+              ))}
+            </div>
+            <div style={sField}><div style={sLabel}>Start Timestamp *</div><input type="datetime-local" value={t} onChange={e=>setT(e.target.value)} style={sInput()}/></div>
+            <div style={{display:'flex',gap:'8px',...sField}}>
+              <div style={{flex:1}}><div style={sLabel}>HM *</div><input type="number" value={hm} onChange={e=>setHm(e.target.value)} style={sInput()}/></div>
+              <div style={{flex:1}}><div style={sLabel}>FM *</div><input type="number" value={fm} onChange={e=>setFm(e.target.value)} style={sInput()}/></div>
+            </div>
+            <button onClick={()=>doStartDt(u.id,cat,t,hm,fm)} style={sBtn(C.amber,'white',{fontSize:'13px',padding:'11px 0'})}>LOG DOWNTIME</button>
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
+
+  const ScreenEndDt = () => {
+    const u=gu(); const [t,setT]=useState(now()); const [hm,setHm]=useState(u.hm); const [fm,setFm]=useState(u.fm);
+    return (
+      <motion.div initial={{opacity:0,x:20}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-20}} style={{flex:1,overflow:'auto',background:C.bg,padding:'8px',fontFamily:FONT}}>
+        <div style={{background:'white',borderRadius:'8px',border:`1px solid ${C.border}`,overflow:'hidden',maxWidth:'480px',margin:'0 auto'}}>
+          <FormHdr title="End Downtime" sub={`${u.id} · ${u.lp}`}/>
+          <div style={{padding:'12px'}}>
+            {u.dt && <div style={{background:C.amberBg,border:`1px solid ${C.amber}`,borderRadius:'6px',padding:'8px',marginBottom:'10px',fontSize:'10px',color:'#92400E'}}>
+              <strong>● DOWNTIME</strong> — {u.dt.category}<br/>Started: {fmtDT(u.dt.startTime)} · HM: {u.dt.hmStart} · FM: {u.dt.fmStart}
+            </div>}
+            <div style={sField}><div style={sLabel}>End Timestamp *</div><input type="datetime-local" value={t} onChange={e=>setT(e.target.value)} style={sInput()}/></div>
+            <div style={{display:'flex',gap:'8px',...sField}}>
+              <div style={{flex:1}}><div style={sLabel}>HM Finish *</div><input type="number" value={hm} onChange={e=>setHm(e.target.value)} style={sInput()}/></div>
+              <div style={{flex:1}}><div style={sLabel}>FM Finish *</div><input type="number" value={fm} onChange={e=>setFm(e.target.value)} style={sInput()}/></div>
+            </div>
+            <button onClick={()=>doEndDt(u.id,t,hm,fm)} style={sBtn(C.success,'white',{fontSize:'13px',padding:'11px 0'})}>END DOWNTIME</button>
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
+
+  const ScreenTS = () => {
+    const u=gu(); const entries=ts[u.id]||[];
+    const [dateFilter, setDateFilter] = useState('');
+    const filtered = dateFilter ? entries.filter(e => e.startTime && e.startTime.startsWith(dateFilter)) : entries;
+    const totalHm = filtered.reduce((a,e)=>a+(e.hmEnd-e.hmStart),0);
+    const totalFm = filtered.reduce((a,e)=>a+(e.fmEnd-e.fmStart),0);
+    return (
+      <motion.div initial={{opacity:0,x:20}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-20}} style={{flex:1,overflow:'auto',background:C.bg,padding:'8px',fontFamily:FONT}}>
+        <div style={{background:'white',borderRadius:'8px',border:`1px solid ${C.border}`,overflow:'hidden'}}>
+          <FormHdr title={`Timesheet — ${u.id}`} sub={`${u.lp} · ${filtered.length} sequences`}/>
+          <div style={{padding:'8px 12px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',gap:'8px'}}>
+            <div style={sLabel}>Date Filter:</div>
+            <input type="date" value={dateFilter} onChange={e=>setDateFilter(e.target.value)} style={{...sInput({width:'auto',padding:'4px 8px',fontSize:'11px'})}}/>
+            {dateFilter && <button onClick={()=>setDateFilter('')} style={{background:'none',border:'none',color:C.teal,fontSize:'10px',cursor:'pointer',fontWeight:600}}>Clear</button>}
+          </div>
+          <div style={{overflowX:'auto'}}>
+            {filtered.length===0?<div style={{padding:'20px',textAlign:'center',fontSize:'11px',color:C.muted}}>No sequences recorded{dateFilter?' for this date':''}.</div>:
+            <table style={{width:'100%',borderCollapse:'collapse',fontSize:'10px',textAlign:'left',fontFamily:FONT}}>
+              <thead><tr style={{background:'#F9FAFB',borderBottom:`1px solid ${C.border}`}}>
+                <th style={{padding:'6px 8px'}}>Operator</th><th style={{padding:'6px 8px'}}>Start</th><th style={{padding:'6px 8px'}}>End</th>
+                <th style={{padding:'6px 8px'}}>HM▵</th><th style={{padding:'6px 8px'}}>FM▵</th><th style={{padding:'6px 8px'}}>Loads</th>
+              </tr></thead>
+              <tbody>{filtered.map((e,i)=>(
+                <tr key={i} style={{borderBottom:`1px solid ${C.border}`,background:i%2===0?'white':'#FAFAFA'}}>
+                  <td style={{padding:'6px 8px',fontWeight:600,color:C.navyLt}}>{e.op}</td>
+                  <td style={{padding:'6px 8px',fontFamily:MONO,fontSize:'9px'}}>{fmtT(e.startTime)}</td>
+                  <td style={{padding:'6px 8px',fontFamily:MONO,fontSize:'9px'}}>{fmtT(e.endTime)}</td>
+                  <td style={{padding:'6px 8px',fontWeight:700,color:C.tealDk,fontFamily:MONO}}>{e.hmEnd-e.hmStart}h</td>
+                  <td style={{padding:'6px 8px',fontWeight:700,color:C.tealDk,fontFamily:MONO}}>{e.fmEnd-e.fmStart}L</td>
+                  <td style={{padding:'6px 8px'}}>{e.loads.length} trucks</td>
+                </tr>
+              ))}</tbody>
+              <tfoot><tr style={{background:'#F0F9FF',borderTop:`2px solid #BAE6FD`}}>
+                <td colSpan="3" style={{padding:'6px 8px',fontWeight:700,color:'#0369A1',fontSize:'11px'}}>TOTALS</td>
+                <td style={{padding:'6px 8px',fontWeight:700,color:'#0369A1',fontFamily:MONO}}>{totalHm}h</td>
+                <td style={{padding:'6px 8px',fontWeight:700,color:'#0369A1',fontFamily:MONO}}>{totalFm}L</td>
+                <td></td>
+              </tr></tfoot>
+            </table>}
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
+
+  const ScreenBarge = () => {
+    const u=gu(); const [selBarge,setSelBarge]=useState(BARGES[0]); const [t,setT]=useState(now()); const [dt,setDt]=useState(now());
+    return (
+      <motion.div initial={{opacity:0,x:20}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-20}} style={{flex:1,overflow:'auto',background:C.bg,padding:'8px',fontFamily:FONT}}>
+        <div style={{display:'flex',gap:'8px',flexWrap:'wrap',maxWidth:'600px',margin:'0 auto'}}>
+          {/* Current Status */}
+          {u.barge ? (
+            <div style={{flex:'1 1 260px',background:'white',borderRadius:'8px',border:`1px solid ${C.success}`,overflow:'hidden'}}>
+              <FormHdr title="Current Barge" sub={`${u.id} · ${u.lp}`}/>
+              <div style={{padding:'12px'}}>
+                <div style={{background:C.successBg,border:`1px solid ${C.success}`,borderRadius:'6px',padding:'8px 10px',marginBottom:'10px'}}>
+                  <div style={{fontSize:'11px',color:'#065F46',fontWeight:700}}>● ATTACHED</div>
+                  <div style={{fontSize:'12px',color:'#047857',fontWeight:600,marginTop:'2px'}}>{u.barge}</div>
+                  <div style={{fontSize:'9px',color:'#047857'}}>Since: {fmtDT(u.bargeAt)}</div>
+                </div>
+                <div style={sField}><div style={sLabel}>Detach Timestamp *</div><input type="datetime-local" value={dt} onChange={e=>setDt(e.target.value)} style={sInput()}/></div>
+                <button onClick={()=>doDetach(u.id,dt)} style={sBtn(C.danger,'white',{fontSize:'12px',padding:'10px 0'})}>DETACH BARGE</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{flex:'1 1 260px',background:'white',borderRadius:'8px',border:`1px solid ${C.border}`,overflow:'hidden'}}>
+              <FormHdr title="Attach Barge" sub={`${u.id} · ${u.lp} — No barge attached`}/>
+              <div style={{padding:'12px'}}>
+                <div style={sField}><div style={sLabel}>Select Barge *</div><select value={selBarge} onChange={e=>setSelBarge(e.target.value)} style={sInput()}>{BARGES.map(b=><option key={b} value={b}>{b}</option>)}</select></div>
+                <div style={sField}><div style={sLabel}>Attach Timestamp *</div><input type="datetime-local" value={t} onChange={e=>setT(e.target.value)} style={sInput()}/></div>
+                <button onClick={()=>doAttach(u.id,selBarge,t)} style={sBtn(C.navyLt,'white',{fontSize:'12px',padding:'10px 0'})}>ATTACH BARGE</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    );
+  };
+
+  /* ═══════════════════════════  MAIN RENDER  ═══════════════════════════ */
+  const screenMap = { tc:ScreenTC, startSeq:ScreenStartSeq, endSeq:ScreenEndSeq, startLoad:ScreenStartLoad, finishLoad:ScreenFinishLoad, trucks:ScreenTrucks, startDt:ScreenStartDt, endDt:ScreenEndDt, ts:ScreenTS, barge:ScreenBarge };
+  const ActiveScreen = screenMap[scr] || ScreenTC;
+
   return (
-    <div style={{ fontFamily: 'system-ui, sans-serif', background: '#F0F2F7', padding: '12px', minHeight: '100%', borderRadius: '12px', display: 'flex', flexDirection: 'column' }}>
-
+    <div style={{fontFamily:FONT,background:C.bg,padding:'12px',minHeight:'100%',borderRadius:'12px',display:'flex',flexDirection:'column'}}>
       {/* Page header */}
-      <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+      <div style={{marginBottom:'12px',display:'flex',justifyContent:'space-between',alignItems:'flex-end'}}>
         <div>
-          <div style={{ fontSize: '15px', fontWeight: 700, color: '#1B2E6B' }}>Digifleet Mobile — DA Enhancement Mockups</div>
-          <div style={{ fontSize: '11px', color: '#6B7280' }}>TC Dashboard UI Overhaul (Barge &#8594; MH &#8594; Truck Flow)</div>
+          <div style={{fontSize:'15px',fontWeight:800,color:C.navyLt,fontFamily:FONT}}>Digifleet Mobile — TC Dashboard Prototype</div>
+          <div style={{fontSize:'10px',color:C.muted}}>PRD v2 · Barge → MH → Truck Flow · localStorage Simulation</div>
         </div>
-        <div style={{ fontSize: '10px', color: '#6B7280' }}>March 2026</div>
-      </div>
-      
-      {/* External Info Bar */}
-      <div style={{ background: 'white', padding: '14px', borderRadius: '8px', border: `1px solid ${BORDER}`, marginBottom: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-        <div style={{ fontSize: '11px', fontWeight: 700, color: NAVY, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          {activeScreenConfig.label} Info
-        </div>
-        <div style={{ fontSize: '13px', color: TEXT, lineHeight: 1.5 }}>
-          {activeScreenConfig.info}
-        </div>
-        
-         {activeScreen !== 'tc' && (
-           <button onClick={() => nav('tc')} style={{ marginTop: '10px', background: '#F3F4F6', border: `1px solid ${BORDER}`, padding: '4px 10px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', fontWeight: 600, color: NAVY }}>
-             &#8592; Back to TC Dashboard
-           </button>
-         )}
+        <button onClick={()=>{if(confirm('Reset all demo data to initial state?')){localStorage.removeItem(SK);window.location.reload();}}} style={{background:'#FEE2E2',color:C.danger,border:`1px solid #FCA5A5`,padding:'4px 10px',borderRadius:'4px',fontSize:'10px',fontWeight:700,cursor:'pointer',fontFamily:FONT}}>♻ RESET DEMO</button>
       </div>
 
-      {/* Device frame - LANDSCAPE */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        padding: '20px 0',
-        background: '#f1f5f9',
-        borderRadius: '12px',
-        flex: 1
-      }}>
-        <div style={{ 
-          background: '#2a2a2a', 
-          borderRadius: '32px', 
-          padding: '12px', 
-          boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
-          width: '840px',
-          height: '440px',
-          position: 'relative'
-        }}>
-          <div style={{ position: 'absolute', top: '50%', left: '8px', transform: 'translateY(-50%)', width: '4px', height: '40px', background: '#444', borderRadius: '2px' }} />
-          
-          <div style={{ 
-            background: 'white', 
-            borderRadius: '24px', 
-            overflow: 'hidden', 
-            display: 'flex', 
-            flexDirection: 'column', 
-            width: '100%',
-            height: '100%',
-            border: '2px solid #000'
-          }}>
-            <Header user="Rindam Manihuruk" id="20031492" />
-            
-            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      {/* External Info Bar */}
+      <div style={{background:'white',padding:'10px 14px',borderRadius:'8px',border:`1px solid ${C.border}`,marginBottom:'12px',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
+        <div style={{fontSize:'10px',fontWeight:700,color:C.navyLt,marginBottom:'3px',textTransform:'uppercase',letterSpacing:'0.05em',fontFamily:FONT}}>{si.l}</div>
+        <div style={{fontSize:'12px',color:C.text,lineHeight:1.5}}>{si.i}</div>
+        {scr!=='tc'&&<button onClick={()=>nav('tc')} style={{marginTop:'8px',background:'#F3F4F6',border:`1px solid ${C.border}`,padding:'3px 10px',borderRadius:'4px',fontSize:'10px',cursor:'pointer',fontWeight:600,color:C.navyLt,fontFamily:FONT}}>← Back to TC Dashboard</button>}
+      </div>
+
+      {/* Device frame */}
+      <div style={{display:'flex',justifyContent:'center',alignItems:'center',padding:'16px 0',background:'#e8ecf4',borderRadius:'12px',flex:1}}>
+        <div style={{background:'#1a1a1a',borderRadius:'28px',padding:'10px',boxShadow:'0 20px 60px rgba(0,0,0,0.18)',width:'840px',height:'440px',position:'relative'}}>
+          <div style={{position:'absolute',top:'50%',left:'6px',transform:'translateY(-50%)',width:'3px',height:'36px',background:'#333',borderRadius:'2px'}}/>
+          <div style={{background:'white',borderRadius:'20px',overflow:'hidden',display:'flex',flexDirection:'column',width:'100%',height:'100%',border:'2px solid #000'}}>
+            <Hdr/>
+            <div style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column',position:'relative'}}>
               <AnimatePresence mode="wait">
-                {activeScreen === 'tc' && <ScreenTC key="tc" />}
-                {activeScreen === 'downtime' && <ScreenDowntime key="downtime" />}
-                {activeScreen === 'start' && <ScreenStart key="start" />}
-                {activeScreen === 'stop' && <ScreenStop key="stop" />}
-                {activeScreen === 'ts' && <ScreenTS key="ts" />}
-                {activeScreen === 'barge' && <ScreenBarge key="barge" />}
-                {activeScreen === 'trucks' && <ScreenTrucks key="trucks" />}
+                <ActiveScreen key={scr}/>
               </AnimatePresence>
             </div>
-
-            <AndroidNav />
+            <Nav/>
           </div>
         </div>
       </div>
-
     </div>
-  )
+  );
 }
