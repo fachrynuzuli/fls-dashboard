@@ -540,7 +540,7 @@ export default function MobileMockup() {
 
       {/* Device frame */}
       <div style={{display:'flex',justifyContent:'center',alignItems:'center',padding:'16px 0',background:'#e8ecf4',borderRadius:'12px',flex:1}}>
-        <div style={{background:'#1a1a1a',borderRadius:'28px',padding:'10px',boxShadow:'0 20px 60px rgba(0,0,0,0.18)',width:'840px',height:'440px',position:'relative'}}>
+        <div style={{background:'#1a1a1a',borderRadius:'28px',padding:'10px',boxShadow:'0 20px 60px rgba(0,0,0,0.18)',width:'840px',height:'520px',position:'relative'}}>
           <div style={{position:'absolute',top:'50%',left:'6px',transform:'translateY(-50%)',width:'3px',height:'36px',background:'#333',borderRadius:'2px'}}/>
           <div style={{background:'white',borderRadius:'20px',overflow:'hidden',display:'flex',flexDirection:'column',width:'100%',height:'100%',border:'2px solid #000'}}>
             <Hdr/>
