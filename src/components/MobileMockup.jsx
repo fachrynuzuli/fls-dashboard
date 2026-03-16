@@ -83,7 +83,7 @@ export default function MobileMockup() {
 
   const MhCard = ({ unit }) => {
     return (
-      <div style={{ borderRadius: '8px', overflow: 'hidden', border: `1px solid ${BORDER}`, flex: '1 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+      <div style={{ borderRadius: '8px', overflow: 'hidden', border: `1px solid ${BORDER}`, flex: '0 0 260px', minWidth: '260px', display: 'flex', flexDirection: 'column', background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
         
         {/* Barge Section (Clickable) */}
         <div onClick={() => nav('barge', unit.id)} style={{ background: '#F8FAFC', padding: '8px 10px', textAlign: 'center', borderBottom: `1px solid ${BORDER}`, cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={e=>e.currentTarget.style.background='#F1F5F9'} onMouseLeave={e=>e.currentTarget.style.background='#F8FAFC'}>
@@ -166,7 +166,7 @@ export default function MobileMockup() {
           </button>
         </div>
 
-        <div style={{ padding: '12px', display: 'flex', gap: '10px', flexWrap: 'wrap', overflowY: 'auto' }}>
+        <div style={{ padding: '12px', display: 'flex', gap: '12px', flexWrap: 'nowrap', overflowX: 'auto', overflowY: 'hidden', minHeight: 0 }}>
           {units.map(u => <MhCard key={u.id} unit={u} />)}
         </div>
       </motion.div>
