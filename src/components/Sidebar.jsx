@@ -96,7 +96,7 @@ export default function Sidebar({ collapsed }) {
                 background: isActive ? "#1e293b" : "#64748b",
                 color: "white", border: "none", borderRadius: 12,
                 fontWeight: 800, fontSize: 13, cursor: "pointer",
-                textDecoration: "none", padding: "10px",
+                textDecoration: "none",
                 transition: "all 0.3s", textTransform: "uppercase", letterSpacing: "0.05em",
                 boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
                 fontFamily: "'Inter', sans-serif"
