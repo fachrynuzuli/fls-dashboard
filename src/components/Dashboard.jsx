@@ -23,17 +23,17 @@ const utilData = [
 ];
 
 const loadingData = [
-  { unit: "MHP0025", rate: 360, target: 355, tons: 5801 },
-  { unit: "MHP0026", rate: 349, target: 355, tons: 4782 },
-  { unit: "MHP0027", rate: 442, target: 355, tons: 7912 },
-  { unit: "MHP0028", rate: 326, target: 355, tons: 4536 },
+  { unit: "MHP0025", operator: "Budi S.", woodSpecies: "Acacia", bargeSize: "300ft", rate: 360, target: 355, tons: 5801 },
+  { unit: "MHP0026", operator: "Andi R.", woodSpecies: "Eucalyptus", bargeSize: "270ft", rate: 349, target: 355, tons: 4782 },
+  { unit: "MHP0027", operator: "Hendra W.", woodSpecies: "Gamelina", bargeSize: "250ft", rate: 442, target: 355, tons: 7912 },
+  { unit: "MHP0028", operator: "Rizki F.", woodSpecies: "Mixed", bargeSize: "300ft", rate: 326, target: 355, tons: 4536 },
 ];
 
 const fuelData = [
-  { unit: "MHP0025", lpt: 0.144, target: 0.143, operator: "Budi S." },
-  { unit: "MHP0026", lpt: 0.116, target: 0.143, operator: "Andi R." },
-  { unit: "MHP0027", lpt: 0.151, target: 0.143, operator: "Hendra W." },
-  { unit: "MHP0028", lpt: 0.148, target: 0.143, operator: "Rizki F." },
+  { unit: "MHP0025", operator: "Budi S.", woodSpecies: "Acacia", bargeSize: "300ft", lpt: 0.144, target: 0.143 },
+  { unit: "MHP0026", operator: "Andi R.", woodSpecies: "Eucalyptus", bargeSize: "270ft", lpt: 0.116, target: 0.143 },
+  { unit: "MHP0027", operator: "Hendra W.", woodSpecies: "Gamelina", bargeSize: "250ft", lpt: 0.151, target: 0.143 },
+  { unit: "MHP0028", operator: "Rizki F.", woodSpecies: "Mixed", bargeSize: "300ft", lpt: 0.148, target: 0.143 },
 ];
 
 const bargeData = [
@@ -232,7 +232,12 @@ function GroupB({ db003Mode, setDb003Mode, db007Mode, setDb007Mode }) {
             <div style={{ flex: 1 }}><SectionTitle>DB-003 · Loading Rate (t/h)</SectionTitle></div>
             <FilterToggle
               active={db003Mode}
-              options={[{ label: "PER UNIT", value: "unit" }, { label: "PER OPERATOR", value: "operator" }]}
+              options={[
+                { label: "PER UNIT", value: "unit" },
+                { label: "PER OPERATOR", value: "operator" },
+                { label: "PER WOOD SPECIES", value: "woodSpecies" },
+                { label: "PER BARGE SIZE", value: "bargeSize" }
+              ]}
               onChange={setDb003Mode}
             />
           </div>
@@ -255,7 +260,12 @@ function GroupB({ db003Mode, setDb003Mode, db007Mode, setDb007Mode }) {
             <div style={{ flex: 1 }}><SectionTitle>DB-007 · Fuel Efficiency (L/ton)</SectionTitle></div>
             <FilterToggle
               active={db007Mode}
-              options={[{ label: "PER UNIT", value: "unit" }, { label: "PER OPERATOR", value: "operator" }]}
+              options={[
+                { label: "PER UNIT", value: "unit" },
+                { label: "PER OPERATOR", value: "operator" },
+                { label: "PER WOOD SPECIES", value: "woodSpecies" },
+                { label: "PER BARGE SIZE", value: "bargeSize" }
+              ]}
               onChange={setDb007Mode}
             />
           </div>
