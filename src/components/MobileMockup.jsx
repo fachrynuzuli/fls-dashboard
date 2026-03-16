@@ -213,9 +213,17 @@ export default function MobileMockup() {
   const ScreenTS = () => {
     const rows = [
       { op: "Amrojali", s: "08:30", e: "10:45", hms: 1205, hmf: 1217, fms: 4820, fmf: 4965 },
-      { op: "Budi", s: "11:00", e: "13:30", hms: 1217, hmf: 1229, fms: 4965, fmf: 5112 },
+      { op: "Budi S.", s: "11:00", e: "13:30", hms: 1217, hmf: 1229, fms: 4965, fmf: 5112 },
       { op: "Amrojali", s: "14:00", e: "16:30", hms: 1229, hmf: 1241, fms: 5112, fmf: 5258 },
+      { op: "Hendra W.", s: "17:00", e: "19:15", hms: 1241, hmf: 1253, fms: 5258, fmf: 5400 },
+      { op: "Yusuf K.", s: "20:00", e: "22:45", hms: 1253, hmf: 1266, fms: 5400, fmf: 5560 },
+      { op: "Ricardo H.", s: "23:00", e: "01:30", hms: 1266, hmf: 1278, fms: 5560, fmf: 5715 },
     ];
+    
+    // Calculate totals automatically based on rows
+    const totalHm = rows.reduce((acc, r) => acc + (r.hmf - r.hms), 0);
+    const totalFm = rows.reduce((acc, r) => acc + (r.fmf - r.fms), 0);
+
     return (
       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1, overflow: 'auto', background: GRAY, padding: '10px' }}>
         <div style={{ background: 'white', borderRadius: '8px', border: `1px solid ${BORDER}`, overflow: 'hidden' }}>
@@ -247,9 +255,9 @@ export default function MobileMockup() {
               <tfoot>
                 <tr style={{ background: '#F0F9FF', borderTop: '2px solid #BAE6FD' }}>
                   <td colSpan="5" style={{ padding: '8px', fontWeight: 700, color: '#0369A1', fontSize: '12px' }}>TOTALS</td>
-                  <td style={{ padding: '8px', fontWeight: 700, color: '#0369A1' }}>36h</td>
+                  <td style={{ padding: '8px', fontWeight: 700, color: '#0369A1' }}>{totalHm}h</td>
                   <td colSpan="2"></td>
-                  <td style={{ padding: '8px', fontWeight: 700, color: '#0369A1' }}>438 L</td>
+                  <td style={{ padding: '8px', fontWeight: 700, color: '#0369A1' }}>{totalFm} L</td>
                 </tr>
               </tfoot>
             </table>

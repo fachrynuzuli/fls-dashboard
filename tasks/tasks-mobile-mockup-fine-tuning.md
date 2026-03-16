@@ -31,9 +31,9 @@
   - [x] 3.3 Ensure "Back" buttons in screens navigate back to the TC Dashboard.
   - [x] 3.4 Add `framer-motion` transitions between mockup screens for a premium feel.
   - [x] 3.5 Refactor `digifleet_da_mockups.html` manually in tandem.
-- [ ] 4.0 Final verification and documentation of the prototype
-  - [ ] 4.1 Test the end-to-end flow: TC Dashboard -> Start Sequence -> Stop Sequence -> Timesheet.
-  - [ ] 4.2 Verify the mockup frame layout is responsive and looks premium.
-- [ ] 5.0 Deploy to GitHub Pages and push changes to repository
-  - [ ] 5.1 Run `npm run build` and `npm run deploy` to update the live site.
-  - [ ] 5.2 Merge feature branch and push to `main`.
+- [x] 4.0 Final verification and documentation of the prototype
+  - [x] 4.1 Test the end-to-end flow: TC Dashboard -> Start Sequence -> Stop Sequence -> Timesheet.
+  - [x] 4.2 Verify the mockup frame layout is responsive and looks premium.
+- [x] 5.0 Deploy to GitHub Pages and push changes to repository
+  - [x] 5.1 Run `npm run build` and `npm run deploy` to update the live site.
+  - [x] 5.2 Merge feature branch and push to `main`.
