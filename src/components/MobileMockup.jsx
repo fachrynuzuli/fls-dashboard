@@ -16,6 +16,7 @@ const MONO = "'JetBrains Mono', monospace";
 
 const OPERATORS = ['Willyanto','Anggiat','Suharno','Ricardo','Faozi','Indahlen','Sahat','Arnol','Parningotan','Rivqi','Ikrar','Edon','Pusen','Juli'];
 const BARGES = ['BG. Sentosa Jaya 2308','BG. Glory Marine 7','BG. Glory Marine 3','BG. Capricorn 119','BG. Capricorn 122','BG. Glory Marine 12'];
+const MHPS = ['MHP0025','MHP0026','MHP0027','MHP0028','MHP0029','MHP0030','MHP0031','MHP0032'];
 const DT_CATS = ['Daily Maintenance','Preventive Service','Urgent Repair','Breakdown'];
 
 const SK = 'fls_dashboard_state';
@@ -27,17 +28,17 @@ const timeDelta = (a,b) => { if(!a||!b) return '—'; const ms=new Date(b)-new D
 
 const INIT = {
   units: [
-    { id:'MHP0025', lp:'P1', jetty:'Jetty Futong - P1', barge:'BG. Sentosa Jaya 2308', bargeAt:'2026-03-16T06:00', op:'—', status:'idle', hm:1205, fm:4820, seq:null, load:null, dt:null, queue:[] },
-    { id:'MHP0026', lp:'P2', jetty:'Jetty Futong - P2', barge:'BG. Glory Marine 7', bargeAt:'2026-03-16T07:30', op:'—', status:'idle', hm:983, fm:3210, seq:null, load:null, dt:null, queue:[] },
-    { id:'MHP0027', lp:'P3', jetty:'Jetty Futong - P3', barge:'BG. Glory Marine 3', bargeAt:'2026-03-16T05:45', op:'—', status:'idle', hm:1450, fm:5680, seq:null, load:null, dt:null, queue:[] },
-    { id:'MHP0028', lp:'P4', jetty:'Jetty Futong - P4', barge:'BG. Capricorn 119', bargeAt:'2026-03-16T06:15', op:'—', status:'idle', hm:760, fm:2890, seq:null, load:null, dt:null, queue:[] },
-    { id:'MHP0029', lp:'P5', jetty:'Jetty Futong - P5', barge:null, bargeAt:null, op:'—', status:'idle', hm:540, fm:1920, seq:null, load:null, dt:null, queue:[] },
+    { id:'P1', mhp:'MHP0025', jetty:'Jetty Futong - P1', barge:'BG. Sentosa Jaya 2308', bargeAt:'2026-03-16T06:00', mhpAt:'2026-03-16T04:00', op:'—', status:'idle', hm:1205, fm:4820, seq:null, load:null, dt:null, queue:[] },
+    { id:'P2', mhp:'MHP0026', jetty:'Jetty Futong - P2', barge:'BG. Glory Marine 7', bargeAt:'2026-03-16T07:30', mhpAt:'2026-03-16T05:00', op:'—', status:'idle', hm:983, fm:3210, seq:null, load:null, dt:null, queue:[] },
+    { id:'P3', mhp:'MHP0027', jetty:'Jetty Futong - P3', barge:'BG. Glory Marine 3', bargeAt:'2026-03-16T05:45', mhpAt:'2026-03-16T05:15', op:'—', status:'idle', hm:1450, fm:5680, seq:null, load:null, dt:null, queue:[] },
+    { id:'P4', mhp:'MHP0028', jetty:'Jetty Futong - P4', barge:'BG. Capricorn 119', bargeAt:'2026-03-16T06:15', mhpAt:'2026-03-16T06:00', op:'—', status:'idle', hm:760, fm:2890, seq:null, load:null, dt:null, queue:[] },
+    { id:'P5', mhp:null, jetty:'Jetty Futong - P5', barge:null, bargeAt:null, mhpAt:null, op:'—', status:'idle', hm:540, fm:1920, seq:null, load:null, dt:null, queue:[] },
   ],
   trucks: ['BDP0012','RTP0344','BDP0088','RTP0199','BDP0155','RTP0401','BDP0222','RTP0285','BDP0310','RTP0422'],
   ts: {},
 };
 
-function ldState() { try { const s=localStorage.getItem(SK); return s?JSON.parse(s):structuredClone(INIT); } catch { return structuredClone(INIT); } }
+function ldState() { try { const s=localStorage.getItem(SK); if(!s) return structuredClone(INIT); const j = JSON.parse(s); if(j.units[0] && j.units[0].lp) { localStorage.removeItem(SK); return structuredClone(INIT); } return j; } catch { return structuredClone(INIT); } }
 function svState(s) { localStorage.setItem(SK, JSON.stringify(s)); }
 
 /* ═══════════════════════════════════════════════════════════
@@ -56,12 +57,13 @@ const SCREENS = {
   startSeq:{ l:'Start Sequence', i:'Pair an Operator with this Material Handler. Key-in Operator Name, Start Timestamp (retroactive OK), Hour Meter, and Fuel Meter to begin a Timesheet Sequence.' },
   endSeq:{ l:'End Sequence', i:'Unpair the Operator from this MH. Key-in End Timestamp, Hour Meter Finish, and Fuel Meter Finish to close the Timesheet Sequence.' },
   startLoad:{ l:'Start Loading', i:'Begin loading the next truck in queue. Key-in start timestamp (retroactive OK).' },
-  finishLoad:{ l:'Finish Loading', i:'Finish loading the active truck. Key-in finish timestamp (retroactive OK). Truck departs queue.' },
+  finishLoad:{ l:'Finish Loading', i:'Finish loading the active truck. Key-in stack, wood type, and finish timestamp. Truck departs queue.' },
   trucks:{ l:'Assign Truck', i:'Pick an incoming truck from the global pool, then select which Loading Point (P1–P5) to assign it to.' },
   startDt:{ l:'Start Downtime', i:'Log a downtime event. This automatically closes the current Timesheet Sequence (HM/FM from this form are used to close it). Status → Downtime.' },
   endDt:{ l:'End Downtime', i:'Close the downtime event. Key-in end timestamp and meter readings. Status → Idle. You can then start a new Timesheet Sequence.' },
   ts:{ l:'Timesheet', i:'Historical record of all completed Timesheet Sequences and their loading activities for this Loading Point.' },
   barge:{ l:'Barge Operations', i:'Attach or detach a barge at this Loading Point. Must detach current barge before attaching a new one. Timestamps are retroactive.' },
+  mhp:{ l:'MHP Operations', i:'Attach or detach a Material Handler (MHP) at this Loading Point. Must detach current MHP before attaching a new one.' },
 };
 
 /* ═══════════════════════════════════════════════════════════
@@ -103,9 +105,9 @@ export default function MobileMockup() {
     mut(id, { load:{truckId:u.queue[0], startTime:t} });
     nav('tc');
   };
-  const doFinishLoad = (id,t) => {
+  const doFinishLoad = (id,t,stack,woodType) => {
     const u=gu(id); if(!u.load) return;
-    const le={...u.load, endTime:t};
+    const le={...u.load, endTime:t, stack, woodType};
     setState(v=>({...v,
       units:v.units.map(uu=>{
         if(uu.id!==id) return uu;
@@ -139,6 +141,8 @@ export default function MobileMockup() {
   const doEndDt = (id,t,hm,fm) => { mut(id, {status:'idle',dt:null,hm:+hm,fm:+fm}); nav('tc'); };
   const doAttach = (id,b,t) => { const u=gu(id); if(u.barge){alert('⚠️ Detach current barge first before attaching a new one.');return;} mut(id,{barge:b,bargeAt:t}); nav('tc'); };
   const doDetach = (id,t) => { mut(id,{barge:null,bargeAt:null}); nav('tc'); };
+  const doAttachMhp = (id,m,t,hm,fm) => { const u=gu(id); if(u.mhp){alert('⚠️ Detach current MHP first before attaching a new one.');return;} mut(id,{mhp:m,mhpAt:t,hm:+hm,fm:+fm}); nav('tc'); };
+  const doDetachMhp = (id,t) => { mut(id,{mhp:null,mhpAt:null}); nav('tc'); };
 
   /* ─── SHARED UI ───────────────────────────── */
   const Pill = ({s}) => {
@@ -189,9 +193,10 @@ export default function MobileMockup() {
         {/* LP body — clickable */}
         <div onClick={()=>lpClick(u)} style={{padding:'8px 9px',cursor:'pointer',flex:1,borderBottom:`1px solid ${C.border}`,transition:'background 0.15s'}} onMouseEnter={e=>e.currentTarget.style.background='#FAFBFF'} onMouseLeave={e=>e.currentTarget.style.background='white'}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'4px'}}>
-            <div style={{display:'flex',alignItems:'baseline',gap:'4px'}}>
-              <span style={{fontWeight:900,fontSize:'16px',color:C.navyLt,fontFamily:MONO}}>{u.lp}</span>
-              <span style={{fontWeight:600,fontSize:'10px',color:C.muted}}>{u.id}</span>
+            <div onClick={(e)=>{e.stopPropagation();nav('mhp',u.id)}} style={{display:'flex',alignItems:'baseline',gap:'4px',cursor:'pointer',background:'#F8FAFC',padding:'2px 4px',margin:'-2px -4px',borderRadius:'4px',border:`1px dashed ${C.border}`}} onMouseEnter={e=>e.currentTarget.style.background='#EEF2FF'} onMouseLeave={e=>e.currentTarget.style.background='#F8FAFC'} title="Tap to manage MHP">
+              <span style={{fontWeight:900,fontSize:'16px',color:C.navyLt,fontFamily:MONO}}>{u.id}</span>
+              <span style={{fontWeight:600,fontSize:'10px',color:C.muted}}>{u.mhp || 'No MHP'}</span>
+              <span style={{fontSize:'8px',color:C.teal,marginLeft:'2px'}}>✎</span>
             </div>
             <Pill s={u.status}/>
           </div>
@@ -265,7 +270,7 @@ export default function MobileMockup() {
     return (
       <motion.div initial={{opacity:0,x:20}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-20}} style={{flex:1,overflow:'auto',background:C.bg,padding:'8px',fontFamily:FONT}}>
         <div style={{background:'white',borderRadius:'8px',border:`1px solid ${C.border}`,overflow:'hidden',maxWidth:'480px',margin:'0 auto'}}>
-          <FormHdr title="Start Sequence" sub={`${u.id} · ${u.lp} — Pair Operator & MH`}/>
+              <FormHdr title="Start Sequence" sub={`${u.mhp || 'No MHP'} · ${u.id} — Pair Operator & MH`}/>
           <div style={{padding:'12px'}}>
             <div style={sField}><div style={sLabel}>Operator *</div><select value={op} onChange={e=>setOp(e.target.value)} style={sInput()}>{OPERATORS.map(o=><option key={o} value={o}>{o}</option>)}</select></div>
             <div style={sField}><div style={sLabel}>Start Timestamp *</div><input type="datetime-local" value={t} onChange={e=>setT(e.target.value)} style={sInput()}/></div>
@@ -285,7 +290,7 @@ export default function MobileMockup() {
     return (
       <motion.div initial={{opacity:0,x:20}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-20}} style={{flex:1,overflow:'auto',background:C.bg,padding:'8px',fontFamily:FONT}}>
         <div style={{background:'white',borderRadius:'8px',border:`1px solid ${C.border}`,overflow:'hidden',maxWidth:'480px',margin:'0 auto'}}>
-          <FormHdr title="End Sequence" sub={`${u.id} · ${u.lp} — Unpair ${u.op}`}/>
+          <FormHdr title="End Sequence" sub={`${u.mhp || 'No MHP'} · ${u.id} — Unpair ${u.op}`}/>
           <div style={{padding:'12px'}}>
             {u.seq && <div style={{background:C.successBg,border:`1px solid ${C.success}`,borderRadius:'6px',padding:'8px 10px',marginBottom:'12px',fontSize:'10px',color:'#065F46'}}>
               <strong>Active since {fmtDT(u.seq.startTime)}</strong><br/>Operator: {u.seq.op} · HM: {u.seq.hmStart} · FM: {u.seq.fmStart}<br/>Loads completed: {u.seq.loads.length}
@@ -307,7 +312,7 @@ export default function MobileMockup() {
     return (
       <motion.div initial={{opacity:0,x:20}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-20}} style={{flex:1,overflow:'auto',background:C.bg,padding:'8px',fontFamily:FONT}}>
         <div style={{background:'white',borderRadius:'8px',border:`1px solid ${C.border}`,overflow:'hidden',maxWidth:'480px',margin:'0 auto'}}>
-          <FormHdr title="Start Loading" sub={`${u.id} · ${u.lp} — Truck ${truck}`}/>
+          <FormHdr title="Start Loading" sub={`${u.mhp || 'No MHP'} · ${u.id} — Truck ${truck}`}/>
           <div style={{padding:'12px'}}>
             <div style={{background:'#F0F9FF',border:'1px solid #BAE6FD',borderRadius:'6px',padding:'10px',marginBottom:'12px',display:'flex',alignItems:'center',gap:'10px'}}>
               <span style={{fontSize:'24px'}}>🚛</span>
@@ -322,19 +327,29 @@ export default function MobileMockup() {
   };
 
   const ScreenFinishLoad = () => {
-    const u=gu(); const ld=u.load; const [t,setT]=useState(now());
+    const u=gu(); const ld=u.load; const [t,setT]=useState(now()); const [stack,setStack]=useState(''); const [woodType,setWoodType]=useState('');
     if(!ld) return <motion.div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:FONT,color:C.muted}} initial={{opacity:0}} animate={{opacity:1}}>No active loading.</motion.div>;
     return (
       <motion.div initial={{opacity:0,x:20}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-20}} style={{flex:1,overflow:'auto',background:C.bg,padding:'8px',fontFamily:FONT}}>
         <div style={{background:'white',borderRadius:'8px',border:`1px solid ${C.border}`,overflow:'hidden',maxWidth:'480px',margin:'0 auto'}}>
-          <FormHdr title="Finish Loading" sub={`${u.id} · ${u.lp} — Truck ${ld.truckId}`}/>
+          <FormHdr title="Finish Loading" sub={`${u.mhp || 'No MHP'} · ${u.id} — Truck ${ld.truckId}`}/>
           <div style={{padding:'12px'}}>
             <div style={{background:C.successBg,border:`1px solid ${C.success}`,borderRadius:'6px',padding:'10px',marginBottom:'12px'}}>
               <div style={{fontSize:'11px',color:'#065F46',fontWeight:700}}>⏳ Loading in progress</div>
               <div style={{fontSize:'10px',color:'#047857',marginTop:'2px'}}>Truck: <strong>{ld.truckId}</strong> · Started: {fmtT(ld.startTime)} · Duration: {timeDelta(ld.startTime,now())}</div>
             </div>
+            <div style={{display:'flex',gap:'8px',...sField}}>
+              <div style={{flex:1}}><div style={sLabel}>Stack *</div><input type="number" min="1" step="1" value={stack} onChange={e=>setStack(e.target.value)} placeholder="e.g. 5" style={sInput()}/></div>
+              <div style={{flex:1}}>
+                <div style={sLabel}>Wood Type *</div>
+                <input list="woodtype-list" value={woodType} onChange={e=>setWoodType(e.target.value)} placeholder="Search…" style={sInput()}/>
+                <datalist id="woodtype-list">
+                  {['ACDB','ACBO','ACWC','AMBO','AMDB','EUBO','EUDB','EUWC','GMDB','GMBO'].map(w=><option key={w} value={w}/>)}
+                </datalist>
+              </div>
+            </div>
             <div style={sField}><div style={sLabel}>Finish Timestamp *</div><input type="datetime-local" value={t} onChange={e=>setT(e.target.value)} style={sInput()}/></div>
-            <button onClick={()=>doFinishLoad(u.id,t)} style={sBtn(C.danger,'white',{fontSize:'13px',padding:'11px 0'})}>■ FINISH LOADING: {ld.truckId}</button>
+            <button disabled={!stack||!woodType} onClick={()=>doFinishLoad(u.id,t,stack,woodType)} style={sBtn(C.danger,'white',{fontSize:'13px',padding:'11px 0',opacity:(!stack||!woodType)?0.5:1})}>■ FINISH LOADING: {ld.truckId}</button>
           </div>
         </div>
       </motion.div>
@@ -353,7 +368,7 @@ export default function MobileMockup() {
               <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
                 {units.map(u=>(
                   <button key={u.id} onClick={()=>doAssign(pickTruck,u.id)} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 12px',border:`1px solid ${C.border}`,borderRadius:'6px',background:'white',cursor:'pointer',fontFamily:FONT,fontSize:'12px',textAlign:'left'}}>
-                    <div><strong style={{color:C.navyLt,fontFamily:MONO}}>{u.lp}</strong> <span style={{color:C.muted}}>· {u.id}</span></div>
+                    <div><strong style={{color:C.navyLt,fontFamily:MONO}}>{u.id}</strong> <span style={{color:C.muted}}>· {u.mhp || 'No MHP'}</span></div>
                     <div style={{fontSize:'9px',color:C.muted}}>Queue: {u.queue.length} · <Pill s={u.status}/></div>
                   </button>
                 ))}
@@ -390,7 +405,7 @@ export default function MobileMockup() {
     return (
       <motion.div initial={{opacity:0,x:20}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-20}} style={{flex:1,overflow:'auto',background:C.bg,padding:'8px',fontFamily:FONT}}>
         <div style={{background:'white',borderRadius:'8px',border:`1px solid ${C.border}`,overflow:'hidden',maxWidth:'480px',margin:'0 auto'}}>
-          <FormHdr title="Start Downtime" sub={`${u.id} · ${u.lp} — Will auto-end current sequence`}/>
+          <FormHdr title="Start Downtime" sub={`${u.mhp || 'No MHP'} · ${u.id} — Will auto-end current sequence`}/>
           <div style={{padding:'12px'}}>
             {u.seq && <div style={{background:C.amberBg,border:`1px solid ${C.amber}`,borderRadius:'6px',padding:'8px',marginBottom:'10px',fontSize:'9px',color:'#92400E'}}>
               <strong>⚠️ Warning:</strong> This will automatically end the current Timesheet Sequence for <strong>{u.seq.op}</strong> using the HM/FM values below.
@@ -420,7 +435,7 @@ export default function MobileMockup() {
     return (
       <motion.div initial={{opacity:0,x:20}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-20}} style={{flex:1,overflow:'auto',background:C.bg,padding:'8px',fontFamily:FONT}}>
         <div style={{background:'white',borderRadius:'8px',border:`1px solid ${C.border}`,overflow:'hidden',maxWidth:'480px',margin:'0 auto'}}>
-          <FormHdr title="End Downtime" sub={`${u.id} · ${u.lp}`}/>
+          <FormHdr title="End Downtime" sub={`${u.mhp || 'No MHP'} · ${u.id}`}/>
           <div style={{padding:'12px'}}>
             {u.dt && <div style={{background:C.amberBg,border:`1px solid ${C.amber}`,borderRadius:'6px',padding:'8px',marginBottom:'10px',fontSize:'10px',color:'#92400E'}}>
               <strong>● DOWNTIME</strong> — {u.dt.category}<br/>Started: {fmtDT(u.dt.startTime)} · HM: {u.dt.hmStart} · FM: {u.dt.fmStart}
@@ -446,7 +461,7 @@ export default function MobileMockup() {
     return (
       <motion.div initial={{opacity:0,x:20}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-20}} style={{flex:1,overflow:'auto',background:C.bg,padding:'8px',fontFamily:FONT}}>
         <div style={{background:'white',borderRadius:'8px',border:`1px solid ${C.border}`,overflow:'hidden'}}>
-          <FormHdr title={`Timesheet — ${u.id}`} sub={`${u.lp} · ${filtered.length} sequences`}/>
+          <FormHdr title={`Timesheet — ${u.mhp || 'No MHP'}`} sub={`${u.id} · ${filtered.length} sequences`}/>
           <div style={{padding:'8px 12px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',gap:'8px'}}>
             <div style={sLabel}>Date Filter:</div>
             <input type="date" value={dateFilter} onChange={e=>setDateFilter(e.target.value)} style={{...sInput({width:'auto',padding:'4px 8px',fontSize:'11px'})}}/>
@@ -490,7 +505,7 @@ export default function MobileMockup() {
           {/* Current Status */}
           {u.barge ? (
             <div style={{flex:'1 1 260px',background:'white',borderRadius:'8px',border:`1px solid ${C.success}`,overflow:'hidden'}}>
-              <FormHdr title="Current Barge" sub={`${u.id} · ${u.lp}`}/>
+              <FormHdr title="Current Barge" sub={`${u.mhp || 'No MHP'} · ${u.id}`}/>
               <div style={{padding:'12px'}}>
                 <div style={{background:C.successBg,border:`1px solid ${C.success}`,borderRadius:'6px',padding:'8px 10px',marginBottom:'10px'}}>
                   <div style={{fontSize:'11px',color:'#065F46',fontWeight:700}}>● ATTACHED</div>
@@ -503,7 +518,7 @@ export default function MobileMockup() {
             </div>
           ) : (
             <div style={{flex:'1 1 260px',background:'white',borderRadius:'8px',border:`1px solid ${C.border}`,overflow:'hidden'}}>
-              <FormHdr title="Attach Barge" sub={`${u.id} · ${u.lp} — No barge attached`}/>
+              <FormHdr title="Attach Barge" sub={`${u.id} — No barge attached`}/>
               <div style={{padding:'12px'}}>
                 <div style={sField}><div style={sLabel}>Select Barge *</div><select value={selBarge} onChange={e=>setSelBarge(e.target.value)} style={sInput()}>{BARGES.map(b=><option key={b} value={b}>{b}</option>)}</select></div>
                 <div style={sField}><div style={sLabel}>Attach Timestamp *</div><input type="datetime-local" value={t} onChange={e=>setT(e.target.value)} style={sInput()}/></div>
@@ -516,8 +531,47 @@ export default function MobileMockup() {
     );
   };
 
+    const ScreenMhp = () => {
+    const u=gu(); const [selMhp,setSelMhp]=useState(MHPS[0]); const [t,setT]=useState(now()); const [dt,setDt]=useState(now());
+    const [hm,setHm]=useState(u.hm||0); const [fm,setFm]=useState(u.fm||0);
+    return (
+      <motion.div initial={{opacity:0,x:20}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-20}} style={{flex:1,overflow:'auto',background:C.bg,padding:'8px',fontFamily:FONT}}>
+        <div style={{display:'flex',gap:'8px',flexWrap:'wrap',maxWidth:'600px',margin:'0 auto'}}>
+          {/* Current Status */}
+          {u.mhp ? (
+            <div style={{flex:'1 1 260px',background:'white',borderRadius:'8px',border:`1px solid ${C.success}`,overflow:'hidden'}}>
+              <FormHdr title="Current MHP" sub={`${u.id} — Material Handler`}/>
+              <div style={{padding:'12px'}}>
+                <div style={{background:C.successBg,border:`1px solid ${C.success}`,borderRadius:'6px',padding:'8px 10px',marginBottom:'10px'}}>
+                  <div style={{fontSize:'11px',color:'#065F46',fontWeight:700}}>● ATTACHED</div>
+                  <div style={{fontSize:'12px',color:'#047857',fontWeight:600,marginTop:'2px'}}>{u.mhp}</div>
+                  <div style={{fontSize:'9px',color:'#047857'}}>Since: {fmtDT(u.mhpAt)}</div>
+                </div>
+                <div style={sField}><div style={sLabel}>Detach Timestamp *</div><input type="datetime-local" value={dt} onChange={e=>setDt(e.target.value)} style={sInput()}/></div>
+                <button onClick={()=>doDetachMhp(u.id,dt)} style={sBtn(C.danger,'white',{fontSize:'12px',padding:'10px 0'})}>DETACH MHP</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{flex:'1 1 260px',background:'white',borderRadius:'8px',border:`1px solid ${C.border}`,overflow:'hidden'}}>
+              <FormHdr title="Attach MHP" sub={`${u.id} — No MHP attached`}/>
+              <div style={{padding:'12px'}}>
+                <div style={sField}><div style={sLabel}>Select MHP *</div><select value={selMhp} onChange={e=>setSelMhp(e.target.value)} style={sInput()}>{MHPS.map(m=><option key={m} value={m}>{m}</option>)}</select></div>
+                <div style={sField}><div style={sLabel}>Attach Timestamp *</div><input type="datetime-local" value={t} onChange={e=>setT(e.target.value)} style={sInput()}/></div>
+                <div style={{display:'flex',gap:'8px',...sField}}>
+                  <div style={{flex:1}}><div style={sLabel}>HM Start *</div><input type="number" value={hm} onChange={e=>setHm(e.target.value)} style={sInput()}/></div>
+                  <div style={{flex:1}}><div style={sLabel}>FM Start *</div><input type="number" value={fm} onChange={e=>setFm(e.target.value)} style={sInput()}/></div>
+                </div>
+                <button onClick={()=>doAttachMhp(u.id,selMhp,t,hm,fm)} style={sBtn(C.navyLt,'white',{fontSize:'12px',padding:'10px 0'})}>ATTACH MHP</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    );
+  };
+
   /* ═══════════════════════════  MAIN RENDER  ═══════════════════════════ */
-  const screenMap = { tc:ScreenTC, startSeq:ScreenStartSeq, endSeq:ScreenEndSeq, startLoad:ScreenStartLoad, finishLoad:ScreenFinishLoad, trucks:ScreenTrucks, startDt:ScreenStartDt, endDt:ScreenEndDt, ts:ScreenTS, barge:ScreenBarge };
+  const screenMap = { tc:ScreenTC, startSeq:ScreenStartSeq, endSeq:ScreenEndSeq, startLoad:ScreenStartLoad, finishLoad:ScreenFinishLoad, trucks:ScreenTrucks, startDt:ScreenStartDt, endDt:ScreenEndDt, ts:ScreenTS, barge:ScreenBarge, mhp:ScreenMhp };
   const ActiveScreen = screenMap[scr] || ScreenTC;
 
   return (
