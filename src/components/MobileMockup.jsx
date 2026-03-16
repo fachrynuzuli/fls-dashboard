@@ -18,6 +18,7 @@ const OPERATORS = ['Willyanto','Anggiat','Suharno','Ricardo','Faozi','Indahlen',
 const BARGES = ['BG. Sentosa Jaya 2308','BG. Glory Marine 7','BG. Glory Marine 3','BG. Capricorn 119','BG. Capricorn 122','BG. Glory Marine 12'];
 const MHPS = ['MHP0025','MHP0026','MHP0027','MHP0028','MHP0029','MHP0030','MHP0031','MHP0032'];
 const DT_CATS = ['Daily Maintenance','Preventive Service','Urgent Repair','Breakdown'];
+const WOOD_TYPES = ['ACDB', 'ACBO', 'ACWC', 'AMBO', 'AMDB', 'EUBO', 'EUDB', 'EUWC', 'GMDB', 'GMBO'];
 
 const SK = 'fls_dashboard_state';
 const now = () => new Date().toISOString().slice(0, 16);
@@ -339,12 +340,12 @@ export default function MobileMockup() {
               <div style={{fontSize:'10px',color:'#047857',marginTop:'2px'}}>Truck: <strong>{ld.truckId}</strong> · Started: {fmtT(ld.startTime)} · Duration: {timeDelta(ld.startTime,now())}</div>
             </div>
             <div style={{display:'flex',gap:'8px',...sField}}>
-              <div style={{flex:1}}><div style={sLabel}>Stack *</div><input type="number" min="1" step="1" value={stack} onChange={e=>setStack(e.target.value)} placeholder="e.g. 5" style={sInput()}/></div>
+              <div style={{flex:1}}><div style={sLabel}>Stack *</div><input type="number" min="0" value={stack} onChange={e=>setStack(e.target.value)} placeholder="e.g. 2" style={sInput()}/></div>
               <div style={{flex:1}}>
                 <div style={sLabel}>Wood Type *</div>
-                <input list="woodtype-list" value={woodType} onChange={e=>setWoodType(e.target.value)} placeholder="Search…" style={sInput()}/>
-                <datalist id="woodtype-list">
-                  {['ACDB','ACBO','ACWC','AMBO','AMDB','EUBO','EUDB','EUWC','GMDB','GMBO'].map(w=><option key={w} value={w}/>)}
+                <input list="wood-types" value={woodType} onChange={e=>setWoodType(e.target.value)} placeholder="Search..." style={sInput()}/>
+                <datalist id="wood-types">
+                  {WOOD_TYPES.map(w=><option key={w} value={w}/>)}
                 </datalist>
               </div>
             </div>
