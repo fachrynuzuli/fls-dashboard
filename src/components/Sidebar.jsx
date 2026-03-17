@@ -2,40 +2,55 @@ import { useState } from "react";
 import ptsiLogo from "../assets/ptsi-logo.png";
 import { NavLink } from "react-router-dom";
 
-function SidebarItem({ icon, label, active, subItems = [], collapsed }) {
+function SidebarItem({ icon, label, to, subItems = [], collapsed }) {
   const [isOpen, setIsOpen] = useState(false);
+  const activeStyle = { background: "#1e293b", color: "#ffffff" };
+  const baseStyle = {
+    display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "space-between",
+    padding: collapsed ? "10px 0" : "10px 16px", cursor: "pointer", borderRadius: 8,
+    color: "#64748b", transition: "all 0.2s", width: "100%", textDecoration: "none"
+  };
+
+  const content = (
+    <div style={{ display: "flex", alignItems: "center", gap: collapsed ? 0 : 12 }}>
+      <span style={{ fontSize: 18 }}>{icon}</span>
+      {!collapsed && <span style={{ fontSize: 13, fontWeight: 500, whiteSpace: "nowrap" }}>{label}</span>}
+    </div>
+  );
+
   return (
     <div style={{ marginBottom: 4 }}>
-      <div
-        onClick={() => !collapsed && setIsOpen(!isOpen)}
-        title={collapsed ? label : ""}
-        style={{
-          display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "space-between",
-          padding: collapsed ? "10px 0" : "10px 16px", cursor: "pointer", borderRadius: 8,
-          background: active ? "#1e293b" : "transparent",
-          color: active ? "#ffffff" : "#64748b",
-          transition: "all 0.2s",
-          width: "100%"
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: collapsed ? 0 : 12 }}>
-          <span style={{ fontSize: 18 }}>{icon}</span>
-          {!collapsed && <span style={{ fontSize: 13, fontWeight: active ? 600 : 500, whiteSpace: "nowrap" }}>{label}</span>}
+      {to ? (
+        <NavLink to={to} style={({ isActive }) => ({ ...baseStyle, ...(isActive ? activeStyle : {}) })} end>
+          {content}
+          {!collapsed && subItems.length > 0 && (
+            <span onClick={(e) => { e.preventDefault(); setIsOpen(!isOpen); }} style={{ fontSize: 10, transform: isOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</span>
+          )}
+        </NavLink>
+      ) : (
+        <div onClick={() => !collapsed && setIsOpen(!isOpen)} style={baseStyle}>
+          {content}
+          {!collapsed && subItems.length > 0 && (
+            <span style={{ fontSize: 10, transform: isOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</span>
+          )}
         </div>
-        {!collapsed && subItems.length > 0 && (
-          <span style={{ fontSize: 10, transform: isOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</span>
-        )}
-      </div>
-      {!collapsed && isOpen && subItems.length > 0 && (
+      )}
+      
+      {!collapsed && (isOpen || subItems.some(item => item.active)) && subItems.length > 0 && (
         <div style={{ marginLeft: 36, marginTop: 4, display: "flex", flexDirection: "column", gap: 4 }}>
           {subItems.map((item, idx) => (
-            <div key={idx} style={{
-              fontSize: 12, padding: "8px 0", cursor: "pointer",
-              color: item.active ? "#0f172a" : "#94a3b8",
-              fontWeight: item.active ? 600 : 400
-            }}>
+            <NavLink
+              key={idx}
+              to={item.to || "#"}
+              style={({ isActive }) => ({
+                fontSize: 12, padding: "8px 0", cursor: "pointer", textDecoration: "none",
+                color: isActive ? "#0f172a" : "#94a3b8",
+                fontWeight: isActive ? 600 : 400
+              })}
+              end
+            >
               {item.label}
-            </div>
+            </NavLink>
           ))}
         </div>
       )}
@@ -55,11 +70,11 @@ export default function Sidebar({ collapsed }) {
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
-        <SidebarItem icon="📊" label="Dashboard" active={true} collapsed={collapsed} subItems={[
-          { label: "Operations", active: true },
-          { label: "Gantt Chart", active: false },
-          { label: "Pre-Departure", active: false },
-          { label: "PSI Results", active: false }
+        <SidebarItem icon="📊" label="Dashboard" to="/" collapsed={collapsed} subItems={[
+          { label: "Operations", to: "/" },
+          { label: "Gantt Chart", to: "/gantt" },
+          { label: "Pre-Departure", to: "/pre-departure" },
+          { label: "PSI Results", to: "/psi-results" }
         ]} />
         <SidebarItem icon="👥" label="Customer" collapsed={collapsed} />
         <SidebarItem icon="📅" label="Planner" collapsed={collapsed} />

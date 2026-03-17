@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
   ResponsiveContainer, Cell, LineChart, Line, PieChart, Pie
 } from "recharts";
+import { motion } from "framer-motion";
 
 // ─── SAMPLE DATA ────────────────────────────────────────────────────────────
 const COLORS = ["#38BDF8", "#FB923C", "#A78BFA", "#34D399"];
@@ -22,19 +23,67 @@ const utilData = [
   { unit: "MHP0028", utilization: 68, available: 20.4, working: 13.9 },
 ];
 
-const loadingData = [
-  { unit: "MHP0025", operator: "Budi S.", woodSpecies: "Acacia", bargeSize: "300ft", rate: 360, target: 355, tons: 5801 },
-  { unit: "MHP0026", operator: "Andi R.", woodSpecies: "Eucalyptus", bargeSize: "270ft", rate: 349, target: 355, tons: 4782 },
-  { unit: "MHP0027", operator: "Hendra W.", woodSpecies: "Gamelina", bargeSize: "250ft", rate: 442, target: 355, tons: 7912 },
-  { unit: "MHP0028", operator: "Rizki F.", woodSpecies: "Mixed", bargeSize: "300ft", rate: 326, target: 355, tons: 4536 },
-];
+const db003Data = {
+  unit: [
+    { unit: "MHP0025", rate: 360, target: 355 },
+    { unit: "MHP0026", rate: 349, target: 355 },
+    { unit: "MHP0027", rate: 442, target: 355 },
+    { unit: "MHP0028", rate: 326, target: 355 },
+  ],
+  operator: [
+    { operator: "Budi S.", rate: 382, target: 355 },
+    { operator: "Andi R.", rate: 345, target: 355 },
+    { operator: "Hendra W.", rate: 410, target: 355 },
+    { operator: "Rizki F.", rate: 338, target: 355 },
+    { operator: "Syaiful H.", rate: 367, target: 355 },
+    { operator: "Taufik M.", rate: 395, target: 355 },
+  ],
+  woodType: [
+    { woodType: "ACDB", rate: 385, target: 355 },
+    { woodType: "ACBO", rate: 342, target: 355 },
+    { woodType: "ACWC", rate: 415, target: 355 },
+    { woodType: "AMBO", rate: 310, target: 355 },
+    { woodType: "GMDB", rate: 395, target: 355 },
+    { woodType: "EUWC", rate: 358, target: 355 },
+  ],
+  bargeSize: [
+    { bargeSize: "300ft", rate: 390, target: 355 },
+    { bargeSize: "270ft", rate: 365, target: 355 },
+    { bargeSize: "250ft", rate: 340, target: 355 },
+    { bargeSize: "230ft", rate: 320, target: 355 },
+  ]
+};
 
-const fuelData = [
-  { unit: "MHP0025", operator: "Budi S.", woodSpecies: "Acacia", bargeSize: "300ft", lpt: 0.144, target: 0.143 },
-  { unit: "MHP0026", operator: "Andi R.", woodSpecies: "Eucalyptus", bargeSize: "270ft", lpt: 0.116, target: 0.143 },
-  { unit: "MHP0027", operator: "Hendra W.", woodSpecies: "Gamelina", bargeSize: "250ft", lpt: 0.151, target: 0.143 },
-  { unit: "MHP0028", operator: "Rizki F.", woodSpecies: "Mixed", bargeSize: "300ft", lpt: 0.148, target: 0.143 },
-];
+const db007Data = {
+  unit: [
+    { unit: "MHP0025", lpt: 0.144, target: 0.143 },
+    { unit: "MHP0026", lpt: 0.116, target: 0.143 },
+    { unit: "MHP0027", lpt: 0.151, target: 0.143 },
+    { unit: "MHP0028", lpt: 0.148, target: 0.143 },
+  ],
+  operator: [
+    { operator: "Budi S.", lpt: 0.138, target: 0.143 },
+    { operator: "Andi R.", lpt: 0.142, target: 0.143 },
+    { operator: "Hendra W.", lpt: 0.115, target: 0.143 },
+    { operator: "Rizki F.", lpt: 0.158, target: 0.143 },
+    { operator: "Syaiful H.", lpt: 0.129, target: 0.143 },
+    { operator: "Taufik M.", lpt: 0.147, target: 0.143 },
+  ],
+  woodType: [
+    { woodType: "ACDB", lpt: 0.132, target: 0.143 },
+    { woodType: "ACBO", lpt: 0.125, target: 0.143 },
+    { woodType: "ACWC", lpt: 0.155, target: 0.143 },
+    { woodType: "AMBO", lpt: 0.165, target: 0.143 },
+    { woodType: "GMDB", lpt: 0.128, target: 0.143 },
+    { woodType: "EUWC", lpt: 0.145, target: 0.143 },
+  ],
+  bargeSize: [
+    { bargeSize: "300ft", lpt: 0.128, target: 0.143 },
+    { bargeSize: "270ft", lpt: 0.138, target: 0.143 },
+    { bargeSize: "250ft", lpt: 0.145, target: 0.143 },
+    { bargeSize: "230ft", lpt: 0.152, target: 0.143 },
+  ]
+};
 
 const bargeData = [
   { barge: "KLM MAJU", lp: "LP-01", attach: "06:12", detach: "09:45", duration: "3h 33m", status: "done" },
@@ -63,10 +112,10 @@ const deliveryTrend = [
   { day: "10", actual: 14136, target: 19000 },
 ];
 
-const woodData = [
-  { name: "Acacia", value: 74, tons: 10447, color: "#38BDF8" },
-  { name: "Eucalyptus", value: 2, tons: 278, color: "#FB923C" },
-  { name: "Gamelina", value: 24, tons: 3411, color: "#A78BFA" },
+const woodTypeData = [
+  { name: "ACDB", value: 74, tons: 10447, color: "#38BDF8" },
+  { name: "AMDB", value: 2, tons: 278, color: "#FB923C" },
+  { name: "GMDB", value: 24, tons: 3411, color: "#A78BFA" },
 ];
 
 const DAILY_ACTUAL = 14136;
@@ -76,6 +125,33 @@ const MTD_ACTUAL = 196336;
 const fmt = (n) => n.toLocaleString("id-ID");
 const pct = (a, t) => Math.round((a / t) * 100);
 
+function ScrambleText({ value }) {
+  const [display, setDisplay] = useState(value);
+  const chars = "0123456789%./";
+
+  useEffect(() => {
+    let iteration = 0;
+    const interval = setInterval(() => {
+      setDisplay(
+        value
+          .split("")
+          .map((char, index) => {
+            if (index < iteration) return value[index];
+            if (char === " " || char === ":" || char === "—") return char;
+            return chars[Math.floor(Math.random() * chars.length)];
+          })
+          .join("")
+      );
+
+      if (iteration >= value.length) clearInterval(interval);
+      iteration += 1 / 3;
+    }, 30);
+    return () => clearInterval(interval);
+  }, [value]);
+
+  return <>{display}</>;
+}
+
 function KPITile({ label, value, sub, accent }) {
   return (
     <div style={{
@@ -84,7 +160,9 @@ function KPITile({ label, value, sub, accent }) {
       boxShadow: "0 1px 3px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.04)"
     }}>
       <div style={{ fontSize: 11, color: "#64748B", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6, fontWeight: 600, fontFamily: "'DM Mono', monospace" }}>{label}</div>
-      <div style={{ fontSize: 32, fontWeight: 700, color: accent || "#0f172a", lineHeight: 1, fontFamily: "'Bebas Neue', cursive" }}>{value}</div>
+      <div style={{ fontSize: 32, fontWeight: 700, color: accent || "#0f172a", lineHeight: 1, fontFamily: "'Bebas Neue', cursive" }}>
+        <ScrambleText value={String(value)} />
+      </div>
       {sub && <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 4, fontFamily: "'DM Mono', monospace" }}>{sub}</div>}
     </div>
   );
@@ -140,7 +218,7 @@ function GroupA() {
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
         <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-          <SectionTitle>DB-001 · Availability per Unit (%)</SectionTitle>
+          <SectionTitle>Availability per Unit (%)</SectionTitle>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={availData} margin={{ top: 20, right: 10, left: -10, bottom: 0 }}>
               <CartesianGrid stroke="#f1f5f9" strokeDasharray="3 3" />
@@ -165,7 +243,7 @@ function GroupA() {
         </div>
 
         <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-          <SectionTitle>DB-002 · Utilization per Unit (%)</SectionTitle>
+          <SectionTitle>Utilization per Unit (%)</SectionTitle>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={utilData} margin={{ top: 20, right: 10, left: -10, bottom: 0 }}>
               <CartesianGrid stroke="#f1f5f9" strokeDasharray="3 3" />
@@ -228,63 +306,63 @@ function GroupB({ db003Mode, setDb003Mode, db007Mode, setDb007Mode }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
         <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-            <div style={{ flex: 1 }}><SectionTitle>DB-003 · Loading Rate (t/h)</SectionTitle></div>
+          <SectionTitle>Loading Rate (t/h)</SectionTitle>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
             <FilterToggle
               active={db003Mode}
               options={[
                 { label: "PER UNIT", value: "unit" },
                 { label: "PER OPERATOR", value: "operator" },
-                { label: "PER WOOD SPECIES", value: "woodSpecies" },
+                { label: "PER WOOD TYPE", value: "woodType" },
                 { label: "PER BARGE SIZE", value: "bargeSize" }
               ]}
               onChange={setDb003Mode}
             />
           </div>
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={loadingData} margin={{ top: 20, right: 10, left: -10, bottom: 0 }}>
+            <BarChart data={db003Data[db003Mode]} margin={{ top: 20, right: 10, left: -10, bottom: 0 }}>
               <CartesianGrid stroke="#f1f5f9" strokeDasharray="3 3" />
               <XAxis dataKey={db003Mode} tick={{ fill: "#94A3B8", fontSize: 10, fontFamily: "DM Mono" }} axisLine={false} tickLine={false} />
               <YAxis domain={[280, 480]} tick={{ fill: "#94A3B8", fontSize: 11, fontFamily: "DM Mono" }} axisLine={false} tickLine={false} />
               <Tooltip content={customTooltip} />
               <ReferenceLine y={355} stroke={TARGET_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: "Target 355", fill: TARGET_COLOR, fontSize: 10, fontFamily: "DM Mono", position: "top", dy: -4 }} />
               <Bar dataKey="rate" name="rate" radius={[6, 6, 0, 0]} maxBarSize={52}>
-                {loadingData.map((d, i) => <Cell key={i} fill={d.rate >= d.target ? "#34D399" : "#FB923C"} fillOpacity={0.85} />)}
+                {db003Data[db003Mode].map((d, i) => <Cell key={i} fill={d.rate >= d.target ? "#34D399" : "#FB923C"} fillOpacity={0.85} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-            <div style={{ flex: 1 }}><SectionTitle>DB-007 · Fuel Efficiency (L/ton)</SectionTitle></div>
+          <SectionTitle>Fuel Efficiency (L/ton)</SectionTitle>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
             <FilterToggle
               active={db007Mode}
               options={[
                 { label: "PER UNIT", value: "unit" },
                 { label: "PER OPERATOR", value: "operator" },
-                { label: "PER WOOD SPECIES", value: "woodSpecies" },
+                { label: "PER WOOD TYPE", value: "woodType" },
                 { label: "PER BARGE SIZE", value: "bargeSize" }
               ]}
               onChange={setDb007Mode}
             />
           </div>
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={fuelData} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
+            <BarChart data={db007Data[db007Mode]} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
               <CartesianGrid stroke="#f1f5f9" strokeDasharray="3 3" />
               <XAxis dataKey={db007Mode} tick={{ fill: "#94A3B8", fontSize: 10, fontFamily: "DM Mono" }} axisLine={false} tickLine={false} />
               <YAxis domain={[0.08, 0.18]} tick={{ fill: "#94A3B8", fontSize: 11, fontFamily: "DM Mono" }} axisLine={false} tickLine={false} />
               <Tooltip content={customTooltip} />
               <ReferenceLine y={0.143} stroke={TARGET_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: "Target 0.143", fill: TARGET_COLOR, fontSize: 10, fontFamily: "DM Mono", position: "top", dy: -4 }} />
               <Bar dataKey="lpt" name="lpt" radius={[6, 6, 0, 0]} maxBarSize={52}>
-                {fuelData.map((d, i) => <Cell key={i} fill={d.lpt <= d.target ? "#34D399" : "#FB923C"} fillOpacity={0.85} />)}
+                {db007Data[db007Mode].map((d, i) => <Cell key={i} fill={d.lpt <= d.target ? "#34D399" : "#FB923C"} fillOpacity={0.85} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-          <SectionTitle>DB-008 · Barge Unloading Time</SectionTitle>
+          <SectionTitle>Barge Unloading Time</SectionTitle>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
             {bargeData.map((b, i) => (
               <div key={i} style={{
@@ -313,7 +391,7 @@ function GroupB({ db003Mode, setDb003Mode, db007Mode, setDb007Mode }) {
         </div>
 
         <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-          <SectionTitle>DB-009 · Avg Loading Time by Stack Count</SectionTitle>
+          <SectionTitle>Avg Loading Time by Stack Count</SectionTitle>
           <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 10 }}>
             {stackData.map((s, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -343,9 +421,13 @@ function ProgressRing({ pct, size = 160, stroke = 14, color = "#38BDF8" }) {
   return (
     <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#f1f5f9" strokeWidth={stroke} />
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke}
-        strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
-        style={{ transition: "stroke-dashoffset 1s ease" }} />
+      <motion.circle
+        cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke}
+        strokeDasharray={circ}
+        initial={{ strokeDashoffset: circ }}
+        animate={{ strokeDashoffset: offset }}
+        transition={{ duration: 1.5, ease: "easeOut" }}
+        strokeLinecap="round" />
     </svg>
   );
 }
@@ -384,7 +466,7 @@ function GroupC({ dailyTarget, setDailyTarget, monthlyTarget, setMonthlyTarget }
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
         {/* DB-010 Daily */}
         <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 32, boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-          <SectionTitle>DB-010 · Delivery Progress — Today</SectionTitle>
+          <SectionTitle>Delivery Progress — Today</SectionTitle>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 32, marginTop: 8 }}>
             <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <ProgressRing pct={dailyPct} size={180} stroke={16} color={dailyPct >= 80 ? "#34D399" : dailyPct >= 50 ? "#F59E0B" : "#FB923C"} />
@@ -411,11 +493,16 @@ function GroupC({ dailyTarget, setDailyTarget, monthlyTarget, setMonthlyTarget }
 
           <div style={{ marginTop: 20 }}>
             <div style={{ height: 10, background: "#f1f5f9", borderRadius: 6, overflow: "hidden" }}>
-              <div style={{
-                height: "100%", width: `${Math.min(100, dailyPct)}%`,
-                background: `linear-gradient(90deg, #38BDF8, #34D399)`,
-                borderRadius: 6, transition: "width 1s ease"
-              }} />
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(100, dailyPct)}%` }}
+                transition={{ duration: 1.5, delay: 0.2, ease: "easeOut" }}
+                style={{
+                  height: "100%",
+                  background: `linear-gradient(90deg, #38BDF8, #34D399)`,
+                  borderRadius: 6
+                }}
+              />
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
               <div style={{ fontSize: 10, color: "#94A3B8", fontFamily: "DM Mono" }}>06:00</div>
@@ -427,7 +514,7 @@ function GroupC({ dailyTarget, setDailyTarget, monthlyTarget, setMonthlyTarget }
 
         {/* DB-011 MTD */}
         <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 32, boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-          <SectionTitle>DB-011 · Delivery Achievement — MTD</SectionTitle>
+          <SectionTitle>Delivery Achievement — MTD</SectionTitle>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 32, marginTop: 8 }}>
             <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <ProgressRing pct={mtdPct} size={180} stroke={16} color="#A78BFA" />
@@ -473,20 +560,19 @@ function GroupC({ dailyTarget, setDailyTarget, monthlyTarget, setMonthlyTarget }
           <SectionTitle>Wood Species Mix — Today</SectionTitle>
           <ResponsiveContainer width="100%" height={130}>
             <PieChart>
-              <Pie data={woodData} cx="50%" cy="50%" innerRadius={36} outerRadius={58} dataKey="value" paddingAngle={3}>
-                {woodData.map((d, i) => <Cell key={i} fill={d.color} />)}
+              <Pie data={woodTypeData} cx="50%" cy="50%" innerRadius={36} outerRadius={58} dataKey="value" paddingAngle={3}>
+                {woodTypeData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
               </Pie>
-              <Tooltip formatter={(v) => `${v}%`} contentStyle={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 8, fontFamily: "DM Mono", fontSize: 12, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }} />
+              <Tooltip />
             </PieChart>
           </ResponsiveContainer>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {woodData.map((d, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: 2, background: d.color }} />
-                  <div style={{ fontSize: 11, color: "#64748B", fontFamily: "DM Mono" }}>{d.name}</div>
-                </div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: d.color, fontFamily: "DM Mono" }}>{fmt(d.tons)} t ({d.value}%)</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 16 }}>
+            {woodTypeData.map((w, i) => (
+              <div key={i} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: w.color }} />
+                <div style={{ fontSize: 10, color: "#475569", fontFamily: "DM Mono" }}>{w.name}: {fmt(w.tons)}t</div>
               </div>
             ))}
           </div>

@@ -70,11 +70,11 @@ const MermaidDiagram = ({ definition }) => {
   }
 
   return (
-    <div 
-      ref={containerRef} 
+    <div
+      ref={containerRef}
       className="mermaid-render-container"
       style={{ display: 'flex', justifyContent: 'center', minHeight: '100px', width: '100%' }}
-      dangerouslySetInnerHTML={{ __html: svg }} 
+      dangerouslySetInnerHTML={{ __html: svg }}
     />
   );
 };
@@ -104,10 +104,37 @@ export default function DiagramsPage() {
         .mermaid-render-container svg { max-width: 100%; height: auto; }
       `}</style>
 
-      <div className="disclaimer">
-        <strong>⚠️ Diagram Disclaimer — Please Read Before Sharing</strong><br />
-        These diagrams represent <em>business intent and process logic</em> — not technical implementation.
-        The author does not have access to the real database schema. All table names and fields are educated guesses.
+      <div className="disclaimer" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "24px" }}>
+        <div>
+          <strong>⚠️ Diagram Disclaimer — Please Read Before Sharing</strong><br />
+          These diagrams represent <em>business intent and process logic</em> — not technical implementation.
+          The author does not have access to the real database schema. All table names and fields are educated guesses.
+        </div>
+        <a 
+          href="./fls-diagrams.html" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          style={{
+            whiteSpace: "nowrap",
+            padding: "10px 18px",
+            background: "#92400e",
+            color: "white",
+            textDecoration: "none",
+            borderRadius: "8px",
+            fontSize: "13px",
+            fontWeight: "700",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            boxShadow: "0 2px 4px rgba(146, 64, 14, 0.2)",
+            transition: "all 0.2s"
+          }}
+          onMouseOver={(e) => e.currentTarget.style.background = "#78350f"}
+          onMouseOut={(e) => e.currentTarget.style.background = "#92400e"}
+        >
+          <span>📜 Full Documentation</span>
+          <span style={{ fontSize: "16px" }}>→</span>
+        </a>
       </div>
 
       {/* 0. SEQUENCE DIAGRAM */}
@@ -166,7 +193,7 @@ export default function DiagramsPage() {
             <div className="section-tag tag-blue">Diagram 1 · System Context</div>
             <div className="section-title">FLS Ecosystem — System Context Overview</div>
             <div className="section-desc">
-               Actors, systems, and data flows. Shows how FDS, Digifleet, Max-C, TRMS, and the new Dashboard module connect.
+              Actors, systems, and data flows. Shows how FDS, Digifleet, Max-C, TRMS, and the new Dashboard module connect.
             </div>
           </div>
           <div className="section-meta">Audience: All stakeholders</div>
@@ -174,11 +201,11 @@ export default function DiagramsPage() {
         <div className="section-body">
           <MermaidDiagram definition={`flowchart TD
     FA["FUTONG_ADMIN"] --> FDS["FDS Backend"]
-    TC["Traffic Controller"] --> DG["Digifleet App"]
+    TC["TRAFFIC_CONTROLLER"] --> DG["Digifleet App"]
     DG --> FDS
     MAXC["Max-C Weighbridge"] --> FDS
     FDS --> DASH["Dashboards"]
-    FDS --> TRMS["TRMS Transport"]
+    FDS --> TRMS["TrMS"]
     DASH --> TV["TV Displays"]`} />
         </div>
       </div>
