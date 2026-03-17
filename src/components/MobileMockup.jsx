@@ -42,6 +42,7 @@ const getInit = () => ({
   ],
   trucks: ['BDP0012', 'RTP0344', 'BDP0088', 'RTP0199', 'BDP0155', 'RTP0401', 'BDP0222', 'RTP0285', 'BDP0310', 'RTP0422'],
   ts: {},
+  partials: {},
 });
 
 function ldState() {
@@ -72,6 +73,7 @@ const SCREENS = {
   endSeq: { l: 'End Sequence', i: 'Unpair the Operator from this MH. Key-in End Timestamp, Hour Meter Finish, and Fuel Meter Finish to close the Timesheet Sequence.' },
   startLoad: { l: 'Start Loading', i: 'Begin loading the next truck in queue. Key-in start timestamp (retroactive OK).' },
   finishLoad: { l: 'Finish Loading', i: 'Finish loading the active truck. Key-in stack, wood type, and finish timestamp. Truck departs queue.' },
+  pauseLoad: { l: 'Pause Loading', i: 'Suspend loading for this truck. Key-in current stacks and wood type. Truck returns to the global pool with a "Partial" indicator.' },
   trucks: { l: 'Assign Truck', i: 'Pick an incoming truck from the global pool, then select which Loading Point (P1–P5) to assign it to.' },
   startDt: { l: 'Start Downtime', i: 'Log a downtime event. This automatically closes the current Timesheet Sequence (HM/FM from this form are used to close it). Status → Downtime.' },
   endDt: { l: 'End Downtime', i: 'Close the downtime event. Key-in end timestamp and meter readings. Status → Idle. You can then start a new Timesheet Sequence.' },
@@ -137,18 +139,42 @@ export default function MobileMockup() {
     mut(id, { load: { truckId: u.queue[0], startTime: t } });
     nav('tc');
   };
-  const doFinishLoad = (id, t, stack, woodType) => {
+  const doPauseLoad = (id, t, stack, woodType) => {
     const u = gu(id); if (!u.load) return;
-    const le = { ...u.load, endTime: t, stack, woodType };
+    const truckId = u.load.truckId;
     setState(v => ({
       ...v,
-      units: v.units.map(uu => {
-        if (uu.id !== id) return uu;
-        const ns = uu.seq ? { ...uu.seq, loads: [...uu.seq.loads, le] } : uu.seq;
-        return { ...uu, load: null, queue: uu.queue.slice(1), seq: ns };
-      })
+      trucks: [...v.trucks, truckId],
+      partials: { ...v.partials, [truckId]: { stack: +stack, woodType } },
+      units: v.units.map(uu => uu.id === id ? { ...uu, load: null, queue: uu.queue.slice(1) } : uu)
     }));
     nav('tc');
+  };
+  const doFinishLoad = (id, t, stack, woodType) => {
+    const u = gu(id); if (!u.load) return;
+    const truckId = u.load.truckId;
+    const partial = state.partials[truckId] || { stack: 0 };
+    const le = { ...u.load, endTime: t, stack: +stack, woodType, resumed: !!state.partials[truckId], prevStack: partial.stack };
+    setState(v => {
+      const { [truckId]: _, ...restPartials } = v.partials;
+      return {
+        ...v,
+        partials: restPartials,
+        units: v.units.map(uu => {
+          if (uu.id !== id) return uu;
+          const ns = uu.seq ? { ...uu.seq, loads: [...uu.seq.loads, le] } : uu.seq;
+          return { ...uu, load: null, queue: uu.queue.slice(1), seq: ns };
+        })
+      };
+    });
+    nav('tc');
+  };
+  const doUnassign = (id, truck) => {
+    setState(v => ({
+      ...v,
+      trucks: [...v.trucks, truck],
+      units: v.units.map(u => u.id === id ? { ...u, queue: u.queue.filter(t => t !== truck) } : u)
+    }));
   };
   const doAssign = (truck, targetId) => {
     setState(v => ({
@@ -250,7 +276,17 @@ export default function MobileMockup() {
             {u.queue.length === 0 ? <span style={{ fontSize: '8px', color: '#9CA3AF', fontStyle: 'italic' }}>Empty</span> :
               u.queue.map((t, i) => {
                 const active = i === 0 && hasLoad;
-                return <div key={i} style={{ background: active ? C.success : 'white', color: active ? 'white' : C.text, border: `1px solid ${active ? C.success : C.border}`, borderRadius: '3px', padding: '1px 4px', fontSize: '8px', fontWeight: 600, fontFamily: MONO }}>🚛{t}</div>;
+                const isPartial = !!state.partials[t];
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                    <div style={{ background: active ? C.success : 'white', color: active ? 'white' : C.text, border: `1px solid ${active ? C.success : C.border}`, borderRadius: '3px', padding: '1px 4px', fontSize: '8px', fontWeight: 600, fontFamily: MONO, display: 'flex', alignItems: 'center', gap: '2px' }}>
+                      🚛{t} {isPartial && <span style={{ fontSize: '6px', color: active ? 'white' : C.amber, fontWeight: 900 }}>[P]</span>}
+                    </div>
+                    {!active && (
+                      <span onClick={e => { e.stopPropagation(); doUnassign(u.id, t); }} style={{ fontSize: '10px', color: C.danger, cursor: 'pointer', padding: '0 2px' }} title="Unassign Truck">✖</span>
+                    )}
+                  </div>
+                );
               })}
           </div>
           {/* Loaded trucks in current sequence */}
@@ -274,7 +310,10 @@ export default function MobileMockup() {
             <button onClick={e => { e.stopPropagation(); nav('startLoad', u.id) }} disabled={u.queue.length === 0} style={sBtn(C.navyLt, 'white', { opacity: u.queue.length === 0 ? 0.4 : 1 })}>{u.queue.length === 0 ? 'NO TRUCKS' : '▶ START LOADING'}</button>
           )}
           {u.status === 'running' && hasLoad && (
-            <button onClick={e => { e.stopPropagation(); nav('finishLoad', u.id) }} style={sBtn(C.danger, 'white')}>■ FINISH LOADING</button>
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <button onClick={e => { e.stopPropagation(); nav('finishLoad', u.id) }} style={sBtn(C.danger, 'white', { flex: 2 })}>■ FINISH</button>
+              <button onClick={e => { e.stopPropagation(); nav('pauseLoad', u.id) }} style={sBtn(C.amber, 'white', { flex: 1 })}>⏸ PAUSE</button>
+            </div>
           )}
           {u.status === 'downtime' && (
             <button onClick={e => { e.stopPropagation(); lpClick(u) }} style={sBtn(C.amber, 'white')}>END DOWNTIME</button>
@@ -376,7 +415,11 @@ export default function MobileMockup() {
   };
 
   const ScreenFinishLoad = () => {
-    const u = gu(); const ld = u.load; const [t, setT] = useState(now()); const [stack, setStack] = useState(''); const [woodType, setWoodType] = useState('');
+    const u = gu(); const ld = u.load;
+    const partial = state.partials[ld?.truckId] || {};
+    const [t, setT] = useState(now());
+    const [stack, setStack] = useState(partial.stack || '');
+    const [woodType, setWoodType] = useState(partial.woodType || '');
     if (!ld) return <motion.div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT, color: C.muted }} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>No active loading.</motion.div>;
     return (
       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1, overflow: 'auto', background: C.bg, padding: '8px', fontFamily: FONT }}>
@@ -399,6 +442,38 @@ export default function MobileMockup() {
             </div>
             <div style={sField}><div style={sLabel}>Finish Timestamp *</div><input type="datetime-local" value={t} onChange={e => setT(e.target.value)} style={sInput()} /></div>
             <button disabled={!stack || !woodType} onClick={() => doFinishLoad(u.id, t, stack, woodType)} style={sBtn(C.danger, 'white', { fontSize: '13px', padding: '11px 0', opacity: (!stack || !woodType) ? 0.5 : 1 })}>■ FINISH LOADING: {ld.truckId}</button>
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
+
+  const ScreenPauseLoad = () => {
+    const u = gu(); const ld = u.load;
+    const partial = state.partials[ld?.truckId] || {};
+    const [t, setT] = useState(now());
+    const [stack, setStack] = useState(partial.stack || '');
+    const [woodType, setWoodType] = useState(partial.woodType || '');
+
+    if (!ld) return <motion.div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT, color: C.muted }} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>No active loading.</motion.div>;
+    return (
+      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1, overflow: 'auto', background: C.bg, padding: '8px', fontFamily: FONT }}>
+        <div style={{ background: 'white', borderRadius: '8px', border: `1px solid ${C.border}`, overflow: 'hidden', maxWidth: '480px', margin: '0 auto' }}>
+          <FormHdr title="Pause Loading" sub={`${u.mhp || 'No MHP'} · ${u.id} — Truck ${ld.truckId}`} />
+          <div style={{ padding: '12px' }}>
+            <div style={{ background: C.amberBg, border: `1px solid ${C.amber}`, borderRadius: '6px', padding: '10px', marginBottom: '12px' }}>
+              <div style={{ fontSize: '11px', color: '#92400E', fontWeight: 700 }}>⏸ Suspending load</div>
+              <div style={{ fontSize: '10px', color: '#92400E', marginTop: '2px' }}>This truck will return to the global pool. Current progress will be saved.</div>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', ...sField }}>
+              <div style={{ flex: 1 }}><div style={sLabel}>Current Stack Count *</div><input type="number" min="0" value={stack} onChange={e => setStack(e.target.value)} placeholder="Loaded so far" style={sInput()} /></div>
+              <div style={{ flex: 1 }}>
+                <div style={sLabel}>Wood Type *</div>
+                <input list="wood-types" value={woodType} onChange={e => setWoodType(e.target.value)} placeholder="Search..." style={sInput()} />
+              </div>
+            </div>
+            <div style={sField}><div style={sLabel}>Suspension Timestamp *</div><input type="datetime-local" value={t} onChange={e => setT(e.target.value)} style={sInput()} /></div>
+            <button disabled={!stack || !woodType} onClick={() => doPauseLoad(u.id, t, stack, woodType)} style={sBtn(C.amber, 'white', { fontSize: '13px', padding: '11px 0', opacity: (!stack || !woodType) ? 0.5 : 1 })}>⏸ PAUSE & RETURN TO POOL</button>
           </div>
         </div>
       </motion.div>
@@ -436,12 +511,21 @@ export default function MobileMockup() {
           <div style={{ padding: '12px' }}>
             {trucks.length === 0 ? <div style={{ padding: '20px', textAlign: 'center', fontSize: '11px', color: C.muted, background: '#F8FAFC', borderRadius: '6px' }}>No incoming trucks.</div> :
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {trucks.map(t => (
-                  <div key={t} onClick={() => setPickTruck(t)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', border: `1px solid ${C.border}`, borderRadius: '6px', cursor: 'pointer', transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = '#F0FDFA'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ fontSize: '16px' }}>🚛</span><span style={{ fontSize: '13px', fontWeight: 700, color: C.navyLt, fontFamily: MONO }}>{t}</span></div>
-                    <span style={{ fontSize: '9px', color: C.teal, fontWeight: 700 }}>ASSIGN →</span>
-                  </div>
-                ))}
+                {trucks.map(t => {
+                  const isPartial = !!state.partials[t];
+                  return (
+                    <div key={t} onClick={() => setPickTruck(t)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', border: `1px solid ${isPartial ? C.amber : C.border}`, borderRadius: '6px', cursor: 'pointer', transition: 'background 0.15s', background: isPartial ? C.amberBg : 'white' }} onMouseEnter={e => e.currentTarget.style.background = isPartial ? '#FEF3C7' : '#F0FDFA'} onMouseLeave={e => e.currentTarget.style.background = isPartial ? C.amberBg : 'white'}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '16px' }}>🚛</span>
+                        <div>
+                          <span style={{ fontSize: '13px', fontWeight: 700, color: C.navyLt, fontFamily: MONO }}>{t}</span>
+                          {isPartial && <div style={{ fontSize: '7px', color: '#92400E', fontWeight: 700, textTransform: 'uppercase' }}>⚠️ Partial Load: {state.partials[t].stack}t {state.partials[t].woodType}</div>}
+                        </div>
+                      </div>
+                      <span style={{ fontSize: '9px', color: isPartial ? '#92400E' : C.teal, fontWeight: 700 }}>{isPartial ? 'RESUME LOAD →' : 'ASSIGN →'}</span>
+                    </div>
+                  );
+                })}
               </div>}
           </div>
         </div>
@@ -703,7 +787,7 @@ export default function MobileMockup() {
   };
 
   /* ═══════════════════════════  MAIN RENDER  ═══════════════════════════ */
-  const screenMap = { tc: ScreenTC, startSeq: ScreenStartSeq, endSeq: ScreenEndSeq, startLoad: ScreenStartLoad, finishLoad: ScreenFinishLoad, trucks: ScreenTrucks, startDt: ScreenStartDt, endDt: ScreenEndDt, ts: ScreenTS, barge: ScreenBarge, mhp: ScreenMhp, seqDetails: ScreenSeqDetails };
+  const screenMap = { tc: ScreenTC, startSeq: ScreenStartSeq, endSeq: ScreenEndSeq, startLoad: ScreenStartLoad, finishLoad: ScreenFinishLoad, pauseLoad: ScreenPauseLoad, trucks: ScreenTrucks, startDt: ScreenStartDt, endDt: ScreenEndDt, ts: ScreenTS, barge: ScreenBarge, mhp: ScreenMhp, seqDetails: ScreenSeqDetails };
   const ActiveScreen = screenMap[scr] || ScreenTC;
 
   return (
