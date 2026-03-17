@@ -34,11 +34,11 @@ const timeDelta = (a, b) => { if (!a || !b) return '—'; const ms = new Date(b)
 
 const getInit = () => ({
   units: [
-    { id: 'P1', mhp: 'MHP0025', jetty: 'Jetty Futong - P1', barge: 'BG. Sentosa Jaya 2308', bargeAt: now(-60), mhpAt: now(-180), op: '—', status: 'idle', hm: 1205, fm: 4820, seq: null, load: null, dt: null, queue: [] },
-    { id: 'P2', mhp: 'MHP0026', jetty: 'Jetty Futong - P2', barge: 'BG. Glory Marine 7', bargeAt: now(-10), mhpAt: now(-120), op: '—', status: 'idle', hm: 983, fm: 3210, seq: null, load: null, dt: null, queue: [] },
-    { id: 'P3', mhp: 'MHP0027', jetty: 'Jetty Futong - P3', barge: 'BG. Glory Marine 3', bargeAt: now(-115), mhpAt: now(-140), op: '—', status: 'idle', hm: 1450, fm: 5680, seq: null, load: null, dt: null, queue: [] },
-    { id: 'P4', mhp: 'MHP0028', jetty: 'Jetty Futong - P4', barge: 'BG. Capricorn 119', bargeAt: now(-45), mhpAt: now(-90), op: '—', status: 'idle', hm: 760, fm: 2890, seq: null, load: null, dt: null, queue: [] },
-    { id: 'P5', mhp: null, jetty: 'Jetty Futong - P5', barge: null, bargeAt: null, mhpAt: null, op: '—', status: 'idle', hm: 540, fm: 1920, seq: null, load: null, dt: null, queue: [] },
+    { id: 'P1', mhp: 'MHP0025', jetty: 'Jetty Futong - P1', barge: 'BG. Sentosa Jaya 2308', bargeAt: now(-60), mhpAt: now(-180), mhp2: null, mhp2At: null, op: '—', op2: '—', status: 'idle', hm: 1205, fm: 4820, hm2: 0, fm2: 0, seq: null, load: null, dt: null, queue: [] },
+    { id: 'P2', mhp: 'MHP0026', jetty: 'Jetty Futong - P2', barge: 'BG. Glory Marine 7', bargeAt: now(-10), mhpAt: now(-120), mhp2: null, mhp2At: null, op: '—', op2: '—', status: 'idle', hm: 983, fm: 3210, hm2: 0, fm2: 0, seq: null, load: null, dt: null, queue: [] },
+    { id: 'P3', mhp: 'MHP0027', jetty: 'Jetty Futong - P3', barge: 'BG. Glory Marine 3', bargeAt: now(-115), mhpAt: now(-140), mhp2: null, mhp2At: null, op: '—', op2: '—', status: 'idle', hm: 1450, fm: 5680, hm2: 0, fm2: 0, seq: null, load: null, dt: null, queue: [] },
+    { id: 'P4', mhp: 'MHP0028', jetty: 'Jetty Futong - P4', barge: 'BG. Capricorn 119', bargeAt: now(-45), mhpAt: now(-90), mhp2: null, mhp2At: null, op: '—', op2: '—', status: 'idle', hm: 760, fm: 2890, hm2: 0, fm2: 0, seq: null, load: null, dt: null, queue: [] },
+    { id: 'P5', mhp: null, jetty: 'Jetty Futong - P5', barge: null, bargeAt: null, mhpAt: null, mhp2: null, mhp2At: null, op: '—', op2: '—', status: 'idle', hm: 540, fm: 1920, hm2: 0, fm2: 0, seq: null, load: null, dt: null, queue: [] },
   ],
   trucks: ['BDP0012', 'RTP0344', 'BDP0088', 'RTP0199', 'BDP0155', 'RTP0401', 'BDP0222', 'RTP0285', 'BDP0310', 'RTP0422'],
   ts: {},
@@ -113,23 +113,37 @@ export default function MobileMockup() {
   const { units, trucks, ts } = state;
   const gu = (id = aid) => units.find(u => u.id === id) || units[0];
   const si = SCREENS[scr] || SCREENS.tc;
+  const mhpLabel = (u) => u.mhp ? `${u.mhp}${u.mhp2 ? ` & ${u.mhp2}` : ''}` : 'No MHP';
+  const opLabel = (u) => `${u.op === '—' ? '—' : u.op}${u.op2 && u.op2 !== '—' ? ` & ${u.op2}` : ''}`;
 
   const nav = (s, id = null) => { if (id) setAid(id); setPickTruck(null); setScr(s); };
-  const lpClick = u => { setAid(u.id); setScr(u.status === 'idle' ? 'startSeq' : u.status === 'running' ? 'endSeq' : 'endDt'); };
+  const lpClick = u => { 
+    if (u.status === 'idle' && (!u.mhp || !u.barge)) {
+      alert('⚠️ Cannot start sequence. Please attach a Barge and at least one Material Handler first.');
+      return;
+    }
+    setAid(u.id); setScr(u.status === 'idle' ? 'startSeq' : u.status === 'running' ? 'endSeq' : 'endDt'); 
+  };
 
   /* ─── ACTIONS ─────────────────────────────── */
   const mut = (id, p) => setState(v => ({ ...v, units: v.units.map(u => u.id === id ? { ...u, ...p } : u) }));
 
-  const doStartSeq = (id, op, t, hm, fm) => {
-    mut(id, { status: 'running', op, seq: { op, startTime: t, hmStart: +hm, fmStart: +fm, loads: [] }, hm: +hm, fm: +fm, load: null });
+  const doStartSeq = (id, op, t, hm, fm, op2, hm2, fm2) => {
+    const u = state.units.find(x => x.id === id);
+    if (!op || (u.mhp2 && !op2)) { alert('⚠️ Please select an operator for all attached MHPs.'); return; }
+    if (u.mhp2 && op === op2) { alert('⚠️ Operators for Primary and Secondary MHPs must be different.'); return; }
+    const activeOps = state.units.filter(x => x.id !== id && x.status === 'running')
+      .flatMap(x => [x.op, x.op2]).filter(o => o && o !== '—');
+    if (activeOps.includes(op) || (u.mhp2 && activeOps.includes(op2))) { alert('⚠️ One or more selected Operators are already on duty elsewhere.'); return; }
+    mut(id, { status: 'running', op, op2: op2 || '—', seq: { op, op2: op2 || '—', startTime: t, hmStart: +hm, fmStart: +fm, hm2Start: +(hm2||0), fm2Start: +(fm2||0), loads: [] }, hm: +hm, fm: +fm, hm2: +(hm2||0), fm2: +(fm2||0), load: null });
     nav('tc');
   };
-  const doEndSeq = (id, t, hm, fm) => {
+  const doEndSeq = (id, t, hm, fm, hm2, fm2) => {
     const u = gu(id); if (!u.seq) return;
-    const entry = { ...u.seq, endTime: t, hmEnd: +hm, fmEnd: +fm };
+    const entry = { ...u.seq, endTime: t, hmEnd: +hm, fmEnd: +fm, hm2End: +(hm2||0), fm2End: +(fm2||0) };
     setState(v => ({
       ...v,
-      units: v.units.map(uu => uu.id === id ? { ...uu, status: 'idle', op: '—', seq: null, load: null, hm: +hm, fm: +fm } : uu),
+      units: v.units.map(uu => uu.id === id ? { ...uu, status: 'idle', op: '—', op2: '—', seq: null, load: null, hm: +hm, fm: +fm, hm2: +(hm2||0), fm2: +(fm2||0) } : uu),
       ts: { ...v.ts, [id]: [...(v.ts[id] || []), entry] }
     }));
     nav('tc');
@@ -177,6 +191,8 @@ export default function MobileMockup() {
     }));
   };
   const doAssign = (truck, targetId) => {
+    const isAssigned = state.units.some(u => u.queue.includes(truck) || u.load?.truckId === truck);
+    if (isAssigned) { alert('⚠️ Truck is already assigned to a Loading Point.'); return; }
     setState(v => ({
       ...v,
       trucks: v.trucks.filter(t => t !== truck),
@@ -184,26 +200,48 @@ export default function MobileMockup() {
     }));
     setPickTruck(null); nav('tc');
   };
-  const doStartDt = (id, cat, t, hm, fm) => {
+  const doStartDt = (id, cat, t, hm, fm, hm2, fm2) => {
     const u = gu(id);
     // auto-end active sequence
     if (u.seq) {
-      const entry = { ...u.seq, endTime: t, hmEnd: +hm, fmEnd: +fm };
+      const entry = { ...u.seq, endTime: t, hmEnd: +hm, fmEnd: +fm, hm2End: +(hm2||0), fm2End: +(fm2||0) };
       setState(v => ({
         ...v,
-        units: v.units.map(uu => uu.id === id ? { ...uu, status: 'downtime', op: '—', seq: null, load: null, dt: { category: cat, startTime: t, hmStart: +hm, fmStart: +fm }, hm: +hm, fm: +fm } : uu),
+        units: v.units.map(uu => uu.id === id ? { ...uu, status: 'downtime', op: '—', op2: '—', seq: null, load: null, dt: { category: cat, startTime: t, hmStart: +hm, fmStart: +fm, hm2Start: +(hm2||0), fm2Start: +(fm2||0) }, hm: +hm, fm: +fm, hm2: +(hm2||0), fm2: +(fm2||0) } : uu),
         ts: { ...v.ts, [id]: [...(v.ts[id] || []), entry] }
       }));
     } else {
-      mut(id, { status: 'downtime', dt: { category: cat, startTime: t, hmStart: +hm, fmStart: +fm }, hm: +hm, fm: +fm });
+      mut(id, { status: 'downtime', dt: { category: cat, startTime: t, hmStart: +hm, fmStart: +fm, hm2Start: +(hm2||0), fm2Start: +(fm2||0) }, hm: +hm, fm: +fm, hm2: +(hm2||0), fm2: +(fm2||0) });
     }
     nav('tc');
   };
-  const doEndDt = (id, t, hm, fm) => { mut(id, { status: 'idle', dt: null, hm: +hm, fm: +fm }); nav('tc'); };
-  const doAttach = (id, b, t) => { const u = gu(id); if (u.barge) { alert('⚠️ Detach current barge first before attaching a new one.'); return; } mut(id, { barge: b, bargeAt: t }); nav('tc'); };
+  const doEndDt = (id, t, hm, fm, hm2, fm2) => { mut(id, { status: 'idle', dt: null, hm: +hm, fm: +fm, hm2: +(hm2||0), fm2: +(fm2||0) }); nav('tc'); };
+  const doAttach = (id, b, t) => {
+    const u = gu(id); 
+    if (u.barge) { alert('⚠️ Detach current barge first before attaching a new one.'); return; } 
+    const attachedBarges = state.units.map(x => x.barge).filter(Boolean);
+    if (attachedBarges.includes(b)) { alert('⚠️ This Barge is already attached to another Loading Point.'); return; }
+    mut(id, { barge: b, bargeAt: t }); nav('tc'); 
+  };
   const doDetach = (id, t) => { mut(id, { barge: null, bargeAt: null }); nav('tc'); };
-  const doAttachMhp = (id, m, t, hm, fm) => { const u = gu(id); if (u.mhp) { alert('⚠️ Detach current MHP first before attaching a new one.'); return; } mut(id, { mhp: m, mhpAt: t, hm: +hm, fm: +fm }); nav('tc'); };
-  const doDetachMhp = (id, t) => { mut(id, { mhp: null, mhpAt: null }); nav('tc'); };
+    const doAttachMhp = (id, m, t, hm, fm, slot = 1) => { 
+    const u = gu(id); 
+    const attachedMhps = state.units.flatMap(x => [x.mhp, x.mhp2]).filter(Boolean);
+    if (attachedMhps.includes(m)) { alert('⚠️ This Material Handler is already attached to a Loading Point.'); return; }
+    if (slot === 1) {
+      if (u.mhp) { alert('⚠️ Detach current Primary MHP first.'); return; }
+      mut(id, { mhp: m, mhpAt: t, hm: +hm, fm: +fm });
+    } else {
+      if (u.mhp2) { alert('⚠️ Detach current Secondary MHP first.'); return; }
+      mut(id, { mhp2: m, mhp2At: t, hm2: +hm, fm2: +fm });
+    }
+    nav('tc'); 
+  };
+    const doDetachMhp = (id, t, slot = 1) => { 
+    if (slot === 1) mut(id, { mhp: null, mhpAt: null }); 
+    else mut(id, { mhp2: null, mhp2At: null });
+    nav('tc'); 
+  };
 
   /* ─── SHARED UI ───────────────────────────── */
   const Pill = ({ s }) => {
@@ -256,13 +294,13 @@ export default function MobileMockup() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
             <div onClick={(e) => { e.stopPropagation(); nav('mhp', u.id) }} style={{ display: 'flex', alignItems: 'baseline', gap: '4px', cursor: 'pointer', background: '#F8FAFC', padding: '2px 4px', margin: '-2px -4px', borderRadius: '4px', border: `1px dashed ${C.border}` }} onMouseEnter={e => e.currentTarget.style.background = '#EEF2FF'} onMouseLeave={e => e.currentTarget.style.background = '#F8FAFC'} title="Tap to manage MHP">
               <span style={{ fontWeight: 900, fontSize: '16px', color: C.navyLt, fontFamily: MONO }}>{u.id}</span>
-              <span style={{ fontWeight: 600, fontSize: '10px', color: C.muted }}>{u.mhp || 'No MHP'}</span>
+              <span style={{ fontWeight: 600, fontSize: '10px', color: C.muted }}>{mhpLabel(u)}</span>
               <span style={{ fontSize: '8px', color: C.teal, marginLeft: '2px' }}>✎</span>
             </div>
             <Pill s={u.status} />
           </div>
           <div style={{ fontSize: '9px', color: C.muted, marginBottom: '1px' }}>↗ {u.jetty}</div>
-          <div style={{ fontSize: '9px', color: C.muted }}>👤 <strong style={{ color: C.text }}>{u.op}</strong></div>
+          <div style={{ fontSize: '9px', color: C.muted }}>👤 <strong style={{ color: C.text }}>{opLabel(u)}</strong></div>
           {hasLoad && <div style={{ marginTop: '4px', fontSize: '8px', padding: '3px 6px', background: C.successBg, border: `1px solid ${C.success}`, borderRadius: '4px', color: '#065F46', fontWeight: 700 }}>⏳ Loading: {u.load.truckId} ({fmtT(u.load.startTime)})</div>}
           <div style={{ fontSize: '7px', color: C.label, marginTop: '4px', fontStyle: 'italic' }}>tap to {u.status === 'idle' ? 'start sequence' : u.status === 'running' ? 'end sequence' : 'end downtime'}</div>
         </div>
@@ -354,19 +392,43 @@ export default function MobileMockup() {
   };
 
   const ScreenStartSeq = () => {
-    const u = gu(); const [op, setOp] = useState(OPERATORS[0]); const [t, setT] = useState(now()); const [hm, setHm] = useState(u.hm); const [fm, setFm] = useState(u.fm);
+    const u = gu(); 
+    const activeOps = units.flatMap(x => [x.op, x.op2]).filter(o => o && o !== '—');
+    const availOps = OPERATORS.filter(o => !activeOps.includes(o));
+
+    const [op, setOp] = useState(availOps[0] || ''); const [t, setT] = useState(now()); const [hm, setHm] = useState(u.hm); const [fm, setFm] = useState(u.fm);
+    const [op2, setOp2] = useState(availOps[1] || availOps[0] || ''); const [hm2, setHm2] = useState(u.hm2 || 0); const [fm2, setFm2] = useState(u.fm2 || 0);
+
     return (
       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1, overflow: 'auto', background: C.bg, padding: '8px', fontFamily: FONT }}>
         <div style={{ background: 'white', borderRadius: '8px', border: `1px solid ${C.border}`, overflow: 'hidden', maxWidth: '480px', margin: '0 auto' }}>
-          <FormHdr title="Start Sequence" sub={`${u.mhp || 'No MHP'} · ${u.id} — Pair Operator & MH`} />
+          <FormHdr title="Start Sequence" sub={`${mhpLabel(u)} · ${u.id} — Pair Operator & MH`} />
           <div style={{ padding: '12px' }}>
-            <div style={sField}><div style={sLabel}>Operator *</div><select value={op} onChange={e => setOp(e.target.value)} style={sInput()}>{OPERATORS.map(o => <option key={o} value={o}>{o}</option>)}</select></div>
             <div style={sField}><div style={sLabel}>Start Timestamp *</div><input type="datetime-local" value={t} onChange={e => setT(e.target.value)} style={sInput()} /></div>
+            
+            {/* Primary MHP */}
+            <div style={{ margin: '16px 0 12px 0', borderTop: `1px dashed ${C.border}` }} />
+            <div style={{ fontSize: '11px', fontWeight: 800, color: C.navyLt, marginBottom: '8px', textTransform: 'uppercase' }}>Primary MHP ({u.mhp || 'None'})</div>
+            <div style={sField}><div style={sLabel}>Operator *</div><select value={op} onChange={e => setOp(e.target.value)} style={sInput()}>{availOps.map(o => <option key={o} value={o}>{o}</option>)}</select></div>
             <div style={{ display: 'flex', gap: '8px', ...sField }}>
               <div style={{ flex: 1 }}><div style={sLabel}>HM Start (hours) *</div><input type="number" value={hm} onChange={e => setHm(e.target.value)} style={sInput()} /></div>
               <div style={{ flex: 1 }}><div style={sLabel}>FM Start (litres) *</div><input type="number" value={fm} onChange={e => setFm(e.target.value)} style={sInput()} /></div>
             </div>
-            <button onClick={() => doStartSeq(u.id, op, t, hm, fm)} style={sBtn(C.success, 'white', { fontSize: '13px', padding: '11px 0' })}>START SEQUENCE</button>
+
+            {/* Secondary MHP */}
+            {u.mhp2 && (
+              <>
+                <div style={{ margin: '16px 0 12px 0', borderTop: `1px dashed ${C.border}` }} />
+                <div style={{ fontSize: '11px', fontWeight: 800, color: C.navyLt, marginBottom: '8px', textTransform: 'uppercase' }}>Secondary MHP ({u.mhp2})</div>
+                <div style={sField}><div style={sLabel}>Operator 2 *</div><select value={op2} onChange={e => setOp2(e.target.value)} style={sInput()}>{availOps.filter(o => o !== op).map(o => <option key={o} value={o}>{o}</option>)}</select></div>
+                <div style={{ display: 'flex', gap: '8px', ...sField }}>
+                  <div style={{ flex: 1 }}><div style={sLabel}>HM Start 2 (hours) *</div><input type="number" value={hm2} onChange={e => setHm2(e.target.value)} style={sInput()} /></div>
+                  <div style={{ flex: 1 }}><div style={sLabel}>FM Start 2 (litres) *</div><input type="number" value={fm2} onChange={e => setFm2(e.target.value)} style={sInput()} /></div>
+                </div>
+              </>
+            )}
+
+            <button disabled={!op || (u.mhp2 && !op2)} onClick={() => doStartSeq(u.id, op, t, hm, fm, op2, hm2, fm2)} style={{ ...sBtn(C.success, 'white', { fontSize: '13px', padding: '11px 0', marginTop: '12px', opacity: (!op || (u.mhp2 && !op2)) ? 0.5 : 1 }) }}>START SEQUENCE</button>
           </div>
         </div>
       </motion.div>
@@ -375,20 +437,36 @@ export default function MobileMockup() {
 
   const ScreenEndSeq = () => {
     const u = gu(); const [t, setT] = useState(now()); const [hm, setHm] = useState(u.hm); const [fm, setFm] = useState(u.fm);
+    const [hm2, setHm2] = useState(u.hm2 || 0); const [fm2, setFm2] = useState(u.fm2 || 0);
     return (
       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1, overflow: 'auto', background: C.bg, padding: '8px', fontFamily: FONT }}>
         <div style={{ background: 'white', borderRadius: '8px', border: `1px solid ${C.border}`, overflow: 'hidden', maxWidth: '480px', margin: '0 auto' }}>
-          <FormHdr title="End Sequence" sub={`${u.mhp || 'No MHP'} · ${u.id} — Unpair ${u.op}`} />
+          <FormHdr title="End Sequence" sub={`${mhpLabel(u)} · ${u.id} — Unpair Operators`} />
           <div style={{ padding: '12px' }}>
             {u.seq && <div style={{ background: C.successBg, border: `1px solid ${C.success}`, borderRadius: '6px', padding: '8px 10px', marginBottom: '12px', fontSize: '10px', color: '#065F46' }}>
-              <strong>Active since {fmtDT(u.seq.startTime)}</strong><br />Operator: {u.seq.op} · HM: {u.seq.hmStart} · FM: {u.seq.fmStart}<br />Loads completed: {u.seq.loads.length}
+              <strong>Active since {fmtDT(u.seq.startTime)}</strong><br />Operator: {u.seq.op}{u.seq.op2 && u.seq.op2 !== '—' && ` & ${u.seq.op2}`} · Loads: {u.seq.loads.length}
             </div>}
             <div style={sField}><div style={sLabel}>End Timestamp *</div><input type="datetime-local" value={t} onChange={e => setT(e.target.value)} style={sInput()} /></div>
+            
+            <div style={{ margin: '16px 0 12px 0', borderTop: `1px dashed ${C.border}` }} />
+            <div style={{ fontSize: '11px', fontWeight: 800, color: C.navyLt, marginBottom: '8px', textTransform: 'uppercase' }}>Primary MHP HM/FM</div>
             <div style={{ display: 'flex', gap: '8px', ...sField }}>
               <div style={{ flex: 1 }}><div style={sLabel}>HM Finish *</div><input type="number" value={hm} onChange={e => setHm(e.target.value)} style={sInput()} /></div>
               <div style={{ flex: 1 }}><div style={sLabel}>FM Finish *</div><input type="number" value={fm} onChange={e => setFm(e.target.value)} style={sInput()} /></div>
             </div>
-            <button onClick={() => doEndSeq(u.id, t, hm, fm)} style={sBtn(C.danger, 'white', { fontSize: '13px', padding: '11px 0' })}>END SEQUENCE & UNPAIR</button>
+
+            {u.mhp2 && (
+              <>
+                <div style={{ margin: '16px 0 12px 0', borderTop: `1px dashed ${C.border}` }} />
+                <div style={{ fontSize: '11px', fontWeight: 800, color: C.navyLt, marginBottom: '8px', textTransform: 'uppercase' }}>Secondary MHP HM/FM</div>
+                <div style={{ display: 'flex', gap: '8px', ...sField }}>
+                  <div style={{ flex: 1 }}><div style={sLabel}>HM Finish 2 *</div><input type="number" value={hm2} onChange={e => setHm2(e.target.value)} style={sInput()} /></div>
+                  <div style={{ flex: 1 }}><div style={sLabel}>FM Finish 2 *</div><input type="number" value={fm2} onChange={e => setFm2(e.target.value)} style={sInput()} /></div>
+                </div>
+              </>
+            )}
+
+            <button onClick={() => doEndSeq(u.id, t, hm, fm, hm2, fm2)} style={{ ...sBtn(C.danger, 'white', { fontSize: '13px', padding: '11px 0', marginTop: '12px' }) }}>END SEQUENCE & UNPAIR</button>
           </div>
         </div>
       </motion.div>
@@ -400,7 +478,7 @@ export default function MobileMockup() {
     return (
       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1, overflow: 'auto', background: C.bg, padding: '8px', fontFamily: FONT }}>
         <div style={{ background: 'white', borderRadius: '8px', border: `1px solid ${C.border}`, overflow: 'hidden', maxWidth: '480px', margin: '0 auto' }}>
-          <FormHdr title="Start Loading" sub={`${u.mhp || 'No MHP'} · ${u.id} — Truck ${truck}`} />
+          <FormHdr title="Start Loading" sub={`${mhpLabel(u)} · ${u.id} — Truck ${truck}`} />
           <div style={{ padding: '12px' }}>
             <div style={{ background: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: '6px', padding: '10px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ fontSize: '24px' }}>🚛</span>
@@ -424,7 +502,7 @@ export default function MobileMockup() {
     return (
       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1, overflow: 'auto', background: C.bg, padding: '8px', fontFamily: FONT }}>
         <div style={{ background: 'white', borderRadius: '8px', border: `1px solid ${C.border}`, overflow: 'hidden', maxWidth: '480px', margin: '0 auto' }}>
-          <FormHdr title="Finish Loading" sub={`${u.mhp || 'No MHP'} · ${u.id} — Truck ${ld.truckId}`} />
+          <FormHdr title="Finish Loading" sub={`${mhpLabel(u)} · ${u.id} — Truck ${ld.truckId}`} />
           <div style={{ padding: '12px' }}>
             <div style={{ background: C.successBg, border: `1px solid ${C.success}`, borderRadius: '6px', padding: '10px', marginBottom: '12px' }}>
               <div style={{ fontSize: '11px', color: '#065F46', fontWeight: 700 }}>⏳ Loading in progress</div>
@@ -459,7 +537,7 @@ export default function MobileMockup() {
     return (
       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1, overflow: 'auto', background: C.bg, padding: '8px', fontFamily: FONT }}>
         <div style={{ background: 'white', borderRadius: '8px', border: `1px solid ${C.border}`, overflow: 'hidden', maxWidth: '480px', margin: '0 auto' }}>
-          <FormHdr title="Pause Loading" sub={`${u.mhp || 'No MHP'} · ${u.id} — Truck ${ld.truckId}`} />
+          <FormHdr title="Pause Loading" sub={`${mhpLabel(u)} · ${u.id} — Truck ${ld.truckId}`} />
           <div style={{ padding: '12px' }}>
             <div style={{ background: C.amberBg, border: `1px solid ${C.amber}`, borderRadius: '6px', padding: '10px', marginBottom: '12px' }}>
               <div style={{ fontSize: '11px', color: '#92400E', fontWeight: 700 }}>⏸ Suspending load</div>
@@ -490,12 +568,15 @@ export default function MobileMockup() {
             <div style={{ padding: '12px' }}>
               <p style={{ fontSize: '10px', color: C.muted, marginBottom: '10px' }}>Choose which Loading Point to assign <strong>{pickTruck}</strong> to:</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {units.map(u => (
-                  <button key={u.id} onClick={() => doAssign(pickTruck, u.id)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', border: `1px solid ${C.border}`, borderRadius: '6px', background: 'white', cursor: 'pointer', fontFamily: FONT, fontSize: '12px', textAlign: 'left' }}>
-                    <div><strong style={{ color: C.navyLt, fontFamily: MONO }}>{u.id}</strong> <span style={{ color: C.muted }}>· {u.mhp || 'No MHP'}</span></div>
-                    <div style={{ fontSize: '9px', color: C.muted }}>Queue: {u.queue.length} · <Pill s={u.status} /></div>
+                {units.map(u => {
+                  const canAssign = u.mhp && u.barge;
+                  return (
+                  <button key={u.id} onClick={() => canAssign ? doAssign(pickTruck, u.id) : alert('⚠️ Cannot assign truck. Please attach a Barge and Material Handler to this Loading Point first.')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', border: `1px solid ${C.border}`, borderRadius: '6px', background: canAssign ? 'white' : '#F3F4F6', opacity: canAssign ? 1 : 0.6, cursor: canAssign ? 'pointer' : 'not-allowed', fontFamily: FONT, fontSize: '12px', textAlign: 'left' }}>
+                    <div><strong style={{ color: C.navyLt, fontFamily: MONO }}>{u.id}</strong> <span style={{ color: C.muted }}>· {mhpLabel(u)}</span></div>
+                    <div style={{ fontSize: '9px', color: C.muted }}>Queue: {u.queue.length} · <Pill s={u.status} /> {(!u.mhp || !u.barge) && <span style={{ color: C.danger, fontWeight: 700, marginLeft: '4px' }}>[Missing Eqp]</span>}</div>
                   </button>
-                ))}
+                );
+                })}
               </div>
               <button onClick={() => setPickTruck(null)} style={{ ...sBtn('#F3F4F6', C.muted, { border: `1px solid ${C.border}`, marginTop: '10px' }) }}>← Back to truck list</button>
             </div>
@@ -535,13 +616,14 @@ export default function MobileMockup() {
 
   const ScreenStartDt = () => {
     const u = gu(); const [cat, setCat] = useState(DT_CATS[0]); const [t, setT] = useState(now()); const [hm, setHm] = useState(u.hm); const [fm, setFm] = useState(u.fm);
+    const [hm2, setHm2] = useState(u.hm2 || 0); const [fm2, setFm2] = useState(u.fm2 || 0);
     return (
       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1, overflow: 'auto', background: C.bg, padding: '8px', fontFamily: FONT }}>
         <div style={{ background: 'white', borderRadius: '8px', border: `1px solid ${C.border}`, overflow: 'hidden', maxWidth: '480px', margin: '0 auto' }}>
-          <FormHdr title="Start Downtime" sub={`${u.mhp || 'No MHP'} · ${u.id} — Will auto-end current sequence`} />
+          <FormHdr title="Start Downtime" sub={`${mhpLabel(u)} · ${u.id} — Will auto-end current sequence`} />
           <div style={{ padding: '12px' }}>
             {u.seq && <div style={{ background: C.amberBg, border: `1px solid ${C.amber}`, borderRadius: '6px', padding: '8px', marginBottom: '10px', fontSize: '9px', color: '#92400E' }}>
-              <strong>⚠️ Warning:</strong> This will automatically end the current Timesheet Sequence for <strong>{u.seq.op}</strong> using the HM/FM values below.
+              <strong>⚠️ Warning:</strong> This will automatically end the current Timesheet Sequence for <strong>{u.seq.op}{u.seq.op2 && u.seq.op2 !== '—' && ` & ${u.seq.op2}`}</strong> using the HM/FM values below.
             </div>}
             <div style={sField}><div style={sLabel}>Category *</div>
               {DT_CATS.map((c, i) => (
@@ -552,11 +634,26 @@ export default function MobileMockup() {
               ))}
             </div>
             <div style={sField}><div style={sLabel}>Start Timestamp *</div><input type="datetime-local" value={t} onChange={e => setT(e.target.value)} style={sInput()} /></div>
+            
+            <div style={{ margin: '16px 0 12px 0', borderTop: `1px dashed ${C.border}` }} />
+            <div style={{ fontSize: '11px', fontWeight: 800, color: C.navyLt, marginBottom: '8px', textTransform: 'uppercase' }}>Primary MHP HM/FM</div>
             <div style={{ display: 'flex', gap: '8px', ...sField }}>
               <div style={{ flex: 1 }}><div style={sLabel}>HM *</div><input type="number" value={hm} onChange={e => setHm(e.target.value)} style={sInput()} /></div>
               <div style={{ flex: 1 }}><div style={sLabel}>FM *</div><input type="number" value={fm} onChange={e => setFm(e.target.value)} style={sInput()} /></div>
             </div>
-            <button onClick={() => doStartDt(u.id, cat, t, hm, fm)} style={sBtn(C.amber, 'white', { fontSize: '13px', padding: '11px 0' })}>LOG DOWNTIME</button>
+
+            {u.mhp2 && (
+              <>
+                <div style={{ margin: '16px 0 12px 0', borderTop: `1px dashed ${C.border}` }} />
+                <div style={{ fontSize: '11px', fontWeight: 800, color: C.navyLt, marginBottom: '8px', textTransform: 'uppercase' }}>Secondary MHP HM/FM</div>
+                <div style={{ display: 'flex', gap: '8px', ...sField }}>
+                  <div style={{ flex: 1 }}><div style={sLabel}>HM 2 *</div><input type="number" value={hm2} onChange={e => setHm2(e.target.value)} style={sInput()} /></div>
+                  <div style={{ flex: 1 }}><div style={sLabel}>FM 2 *</div><input type="number" value={fm2} onChange={e => setFm2(e.target.value)} style={sInput()} /></div>
+                </div>
+              </>
+            )}
+
+            <button onClick={() => doStartDt(u.id, cat, t, hm, fm, hm2, fm2)} style={{ ...sBtn(C.amber, 'white', { fontSize: '13px', padding: '11px 0', marginTop: '12px' }) }}>LOG DOWNTIME</button>
           </div>
         </div>
       </motion.div>
@@ -565,20 +662,36 @@ export default function MobileMockup() {
 
   const ScreenEndDt = () => {
     const u = gu(); const [t, setT] = useState(now()); const [hm, setHm] = useState(u.hm); const [fm, setFm] = useState(u.fm);
+    const [hm2, setHm2] = useState(u.hm2 || 0); const [fm2, setFm2] = useState(u.fm2 || 0);
     return (
       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1, overflow: 'auto', background: C.bg, padding: '8px', fontFamily: FONT }}>
         <div style={{ background: 'white', borderRadius: '8px', border: `1px solid ${C.border}`, overflow: 'hidden', maxWidth: '480px', margin: '0 auto' }}>
-          <FormHdr title="End Downtime" sub={`${u.mhp || 'No MHP'} · ${u.id}`} />
+          <FormHdr title="End Downtime" sub={`${mhpLabel(u)} · ${u.id}`} />
           <div style={{ padding: '12px' }}>
             {u.dt && <div style={{ background: C.amberBg, border: `1px solid ${C.amber}`, borderRadius: '6px', padding: '8px', marginBottom: '10px', fontSize: '10px', color: '#92400E' }}>
-              <strong>● DOWNTIME</strong> — {u.dt.category}<br />Started: {fmtDT(u.dt.startTime)} · HM: {u.dt.hmStart} · FM: {u.dt.fmStart}
+              <strong>● DOWNTIME</strong> — {u.dt.category}<br />Started: {fmtDT(u.dt.startTime)}
             </div>}
             <div style={sField}><div style={sLabel}>End Timestamp *</div><input type="datetime-local" value={t} onChange={e => setT(e.target.value)} style={sInput()} /></div>
+            
+            <div style={{ margin: '16px 0 12px 0', borderTop: `1px dashed ${C.border}` }} />
+            <div style={{ fontSize: '11px', fontWeight: 800, color: C.navyLt, marginBottom: '8px', textTransform: 'uppercase' }}>Primary MHP HM/FM</div>
             <div style={{ display: 'flex', gap: '8px', ...sField }}>
               <div style={{ flex: 1 }}><div style={sLabel}>HM Finish *</div><input type="number" value={hm} onChange={e => setHm(e.target.value)} style={sInput()} /></div>
               <div style={{ flex: 1 }}><div style={sLabel}>FM Finish *</div><input type="number" value={fm} onChange={e => setFm(e.target.value)} style={sInput()} /></div>
             </div>
-            <button onClick={() => doEndDt(u.id, t, hm, fm)} style={sBtn(C.success, 'white', { fontSize: '13px', padding: '11px 0' })}>END DOWNTIME</button>
+
+            {u.mhp2 && (
+              <>
+                <div style={{ margin: '16px 0 12px 0', borderTop: `1px dashed ${C.border}` }} />
+                <div style={{ fontSize: '11px', fontWeight: 800, color: C.navyLt, marginBottom: '8px', textTransform: 'uppercase' }}>Secondary MHP HM/FM</div>
+                <div style={{ display: 'flex', gap: '8px', ...sField }}>
+                  <div style={{ flex: 1 }}><div style={sLabel}>HM Finish 2 *</div><input type="number" value={hm2} onChange={e => setHm2(e.target.value)} style={sInput()} /></div>
+                  <div style={{ flex: 1 }}><div style={sLabel}>FM Finish 2 *</div><input type="number" value={fm2} onChange={e => setFm2(e.target.value)} style={sInput()} /></div>
+                </div>
+              </>
+            )}
+
+            <button onClick={() => doEndDt(u.id, t, hm, fm, hm2, fm2)} style={{ ...sBtn(C.success, 'white', { fontSize: '13px', padding: '11px 0', marginTop: '12px' }) }}>END DOWNTIME</button>
           </div>
         </div>
       </motion.div>
@@ -595,7 +708,7 @@ export default function MobileMockup() {
     return (
       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1, overflow: 'auto', background: C.bg, padding: '8px', fontFamily: FONT }}>
         <div style={{ background: 'white', borderRadius: '8px', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
-          <FormHdr title={`Timesheet — ${u.mhp || 'No MHP'}`} sub={`${u.id} · ${filtered.length} sequences`} />
+          <FormHdr title={`Timesheet — ${mhpLabel(u)}`} sub={`${u.id} · ${filtered.length} sequences`} />
           <div style={{ padding: '8px 12px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={sLabel}>Date Filter:</div>
             <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} style={{ ...sInput({ width: 'auto', padding: '4px 8px', fontSize: '11px' }) }} />
@@ -611,7 +724,7 @@ export default function MobileMockup() {
                 <tbody>{filtered.map((e, i) => (
                   <React.Fragment key={i}>
                     <tr onClick={() => setExp(x => ({ ...x, [i]: !x[i] }))} style={{ cursor: 'pointer', borderBottom: `1px solid ${C.border}`, background: i % 2 === 0 ? 'white' : '#FAFAFA' }}>
-                      <td style={{ padding: '6px 8px', fontWeight: 600, color: C.navyLt }}>{e.op} <span style={{ fontSize: '8px', marginLeft: '4px' }}>{e.loads.length > 0 && (exp[i] ? '▼' : '▶')}</span></td>
+                      <td style={{ padding: '6px 8px', fontWeight: 600, color: C.navyLt }}>{e.op}{e.op2 && e.op2 !== '—' ? ` & ${e.op2}` : ''} <span style={{ fontSize: '8px', marginLeft: '4px' }}>{e.loads.length > 0 && (exp[i] ? '▼' : '▶')}</span></td>
                       <td style={{ padding: '6px 8px', fontFamily: MONO, fontSize: '9px' }}>{fmtT(e.startTime)}</td>
                       <td style={{ padding: '6px 8px', fontFamily: MONO, fontSize: '9px' }}>{fmtT(e.endTime)}</td>
                       <td style={{ padding: '6px 8px', fontWeight: 700, color: C.tealDk, fontFamily: MONO }}>{e.hmEnd - e.hmStart}h</td>
@@ -666,14 +779,17 @@ export default function MobileMockup() {
   };
 
   const ScreenBarge = () => {
-    const u = gu(); const [selBarge, setSelBarge] = useState(BARGES[0]); const [t, setT] = useState(now()); const [dt, setDt] = useState(now());
+    const u = gu(); 
+    const attachedBarges = units.map(x => x.barge).filter(Boolean);
+    const availBarges = BARGES.filter(b => !attachedBarges.includes(b));
+    const [selBarge, setSelBarge] = useState(availBarges[0] || ''); const [t, setT] = useState(now()); const [dt, setDt] = useState(now());
     return (
       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1, overflow: 'auto', background: C.bg, padding: '8px', fontFamily: FONT }}>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', maxWidth: '600px', margin: '0 auto' }}>
           {/* Current Status */}
           {u.barge ? (
             <div style={{ flex: '1 1 260px', background: 'white', borderRadius: '8px', border: `1px solid ${C.success}`, overflow: 'hidden' }}>
-              <FormHdr title="Current Barge" sub={`${u.mhp || 'No MHP'} · ${u.id}`} />
+              <FormHdr title="Current Barge" sub={`${mhpLabel(u)} · ${u.id}`} />
               <div style={{ padding: '12px' }}>
                 <div style={{ background: C.successBg, border: `1px solid ${C.success}`, borderRadius: '6px', padding: '8px 10px', marginBottom: '10px' }}>
                   <div style={{ fontSize: '11px', color: '#065F46', fontWeight: 700 }}>● ATTACHED</div>
@@ -688,9 +804,9 @@ export default function MobileMockup() {
             <div style={{ flex: '1 1 260px', background: 'white', borderRadius: '8px', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
               <FormHdr title="Attach Barge" sub={`${u.id} — No barge attached`} />
               <div style={{ padding: '12px' }}>
-                <div style={sField}><div style={sLabel}>Select Barge *</div><select value={selBarge} onChange={e => setSelBarge(e.target.value)} style={sInput()}>{BARGES.map(b => <option key={b} value={b}>{b}</option>)}</select></div>
+                <div style={sField}><div style={sLabel}>Select Barge *</div><select value={selBarge} onChange={e => setSelBarge(e.target.value)} style={sInput()}>{availBarges.map(b => <option key={b} value={b}>{b}</option>)}</select></div>
                 <div style={sField}><div style={sLabel}>Attach Timestamp *</div><input type="datetime-local" value={t} onChange={e => setT(e.target.value)} style={sInput()} /></div>
-                <button onClick={() => doAttach(u.id, selBarge, t)} style={sBtn(C.navyLt, 'white', { fontSize: '12px', padding: '10px 0' })}>ATTACH BARGE</button>
+                <button disabled={!selBarge} onClick={() => doAttach(u.id, selBarge, t)} style={sBtn(C.navyLt, 'white', { fontSize: '12px', padding: '10px 0', opacity: !selBarge ? 0.5 : 1 })}>ATTACH BARGE</button>
               </div>
             </div>
           )}
@@ -700,39 +816,73 @@ export default function MobileMockup() {
   };
 
   const ScreenMhp = () => {
-    const u = gu(); const [selMhp, setSelMhp] = useState(MHPS[0]); const [t, setT] = useState(now()); const [dt, setDt] = useState(now());
+    const u = gu(); 
+    const attachedMhps = units.flatMap(x => [x.mhp, x.mhp2]).filter(Boolean);
+    const availMhps = MHPS.filter(m => !attachedMhps.includes(m));
+
+    const [selMhp, setSelMhp] = useState(availMhps[0] || ''); const [t, setT] = useState(now()); const [dt, setDt] = useState(now());
     const [hm, setHm] = useState(u.hm || 0); const [fm, setFm] = useState(u.fm || 0);
+    
+    // For MHP 2
+    const [selMhp2, setSelMhp2] = useState(availMhps[1] || availMhps[0] || ''); const [t2, setT2] = useState(now()); const [dt2, setDt2] = useState(now());
+    const [hm2b, setHm2b] = useState(u.hm2 || 0); const [fm2b, setFm2b] = useState(u.fm2 || 0);
+
+    const renderMhpSlot = (slot) => {
+      const isMhp2 = slot === 2;
+      const currentMhp = isMhp2 ? u.mhp2 : u.mhp;
+      const currentAt = isMhp2 ? u.mhp2At : u.mhpAt;
+      
+      const sel = isMhp2 ? selMhp2 : selMhp;
+      const setSel = isMhp2 ? setSelMhp2 : setSelMhp;
+      const myT = isMhp2 ? t2 : t;
+      const setMyT = isMhp2 ? setT2 : setT;
+      const myDt = isMhp2 ? dt2 : dt;
+      const setMyDt = isMhp2 ? setDt2 : setDt;
+      const myHm = isMhp2 ? hm2b : hm;
+      const setMyHm = isMhp2 ? setHm2b : setHm;
+      const myFm = isMhp2 ? fm2b : fm;
+      const setMyFm = isMhp2 ? setFm2b : setFm;
+      
+      const attachLabel = isMhp2 ? "Secondary MHP" : "Primary MHP";
+
+      if (currentMhp) {
+        return (
+          <div key={slot} style={{ flex: '1 1 260px', background: 'white', borderRadius: '8px', border: `1px solid ${C.success}`, overflow: 'hidden' }}>
+            <FormHdr title={`Current ${attachLabel}`} sub={`${u.id} — Material Handler`} />
+            <div style={{ padding: '12px' }}>
+              <div style={{ background: C.successBg, border: `1px solid ${C.success}`, borderRadius: '6px', padding: '8px 10px', marginBottom: '10px' }}>
+                <div style={{ fontSize: '11px', color: '#065F46', fontWeight: 700 }}>● ATTACHED</div>
+                <div style={{ fontSize: '12px', color: '#047857', fontWeight: 600, marginTop: '2px' }}>{currentMhp}</div>
+                <div style={{ fontSize: '9px', color: '#047857' }}>Since: {fmtDT(currentAt)}</div>
+              </div>
+              <div style={sField}><div style={sLabel}>Detach Timestamp *</div><input type="datetime-local" value={myDt} onChange={e => setMyDt(e.target.value)} style={sInput()} /></div>
+              <button onClick={() => doDetachMhp(u.id, myDt, slot)} style={sBtn(C.danger, 'white', { fontSize: '12px', padding: '10px 0' })}>DETACH MHP</button>
+            </div>
+          </div>
+        );
+      }
+      
+      return (
+        <div key={slot} style={{ flex: '1 1 260px', background: 'white', borderRadius: '8px', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+          <FormHdr title={`Attach ${attachLabel}`} sub={`${u.id} — Empty Slot`} />
+          <div style={{ padding: '12px' }}>
+            <div style={sField}><div style={sLabel}>Select MHP *</div><select value={sel} onChange={e => setSel(e.target.value)} style={sInput()}>{availMhps.filter(m => m !== (isMhp2 ? selMhp : selMhp2)).map(m => <option key={m} value={m}>{m}</option>)}</select></div>
+            <div style={sField}><div style={sLabel}>Attach Timestamp *</div><input type="datetime-local" value={myT} onChange={e => setMyT(e.target.value)} style={sInput()} /></div>
+            <div style={{ display: 'flex', gap: '8px', ...sField }}>
+              <div style={{ flex: 1 }}><div style={sLabel}>HM Start *</div><input type="number" value={myHm} onChange={e => setMyHm(e.target.value)} style={sInput()} /></div>
+              <div style={{ flex: 1 }}><div style={sLabel}>FM Start *</div><input type="number" value={myFm} onChange={e => setMyFm(e.target.value)} style={sInput()} /></div>
+            </div>
+            <button disabled={!sel} onClick={() => doAttachMhp(u.id, sel, myT, myHm, myFm, slot)} style={sBtn(C.navyLt, 'white', { fontSize: '12px', padding: '10px 0', opacity: !sel ? 0.5 : 1 })}>ATTACH MHP</button>
+          </div>
+        </div>
+      );
+    };
+
     return (
       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1, overflow: 'auto', background: C.bg, padding: '8px', fontFamily: FONT }}>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', maxWidth: '600px', margin: '0 auto' }}>
-          {/* Current Status */}
-          {u.mhp ? (
-            <div style={{ flex: '1 1 260px', background: 'white', borderRadius: '8px', border: `1px solid ${C.success}`, overflow: 'hidden' }}>
-              <FormHdr title="Current MHP" sub={`${u.id} — Material Handler`} />
-              <div style={{ padding: '12px' }}>
-                <div style={{ background: C.successBg, border: `1px solid ${C.success}`, borderRadius: '6px', padding: '8px 10px', marginBottom: '10px' }}>
-                  <div style={{ fontSize: '11px', color: '#065F46', fontWeight: 700 }}>● ATTACHED</div>
-                  <div style={{ fontSize: '12px', color: '#047857', fontWeight: 600, marginTop: '2px' }}>{u.mhp}</div>
-                  <div style={{ fontSize: '9px', color: '#047857' }}>Since: {fmtDT(u.mhpAt)}</div>
-                </div>
-                <div style={sField}><div style={sLabel}>Detach Timestamp *</div><input type="datetime-local" value={dt} onChange={e => setDt(e.target.value)} style={sInput()} /></div>
-                <button onClick={() => doDetachMhp(u.id, dt)} style={sBtn(C.danger, 'white', { fontSize: '12px', padding: '10px 0' })}>DETACH MHP</button>
-              </div>
-            </div>
-          ) : (
-            <div style={{ flex: '1 1 260px', background: 'white', borderRadius: '8px', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
-              <FormHdr title="Attach MHP" sub={`${u.id} — No MHP attached`} />
-              <div style={{ padding: '12px' }}>
-                <div style={sField}><div style={sLabel}>Select MHP *</div><select value={selMhp} onChange={e => setSelMhp(e.target.value)} style={sInput()}>{MHPS.map(m => <option key={m} value={m}>{m}</option>)}</select></div>
-                <div style={sField}><div style={sLabel}>Attach Timestamp *</div><input type="datetime-local" value={t} onChange={e => setT(e.target.value)} style={sInput()} /></div>
-                <div style={{ display: 'flex', gap: '8px', ...sField }}>
-                  <div style={{ flex: 1 }}><div style={sLabel}>HM Start *</div><input type="number" value={hm} onChange={e => setHm(e.target.value)} style={sInput()} /></div>
-                  <div style={{ flex: 1 }}><div style={sLabel}>FM Start *</div><input type="number" value={fm} onChange={e => setFm(e.target.value)} style={sInput()} /></div>
-                </div>
-                <button onClick={() => doAttachMhp(u.id, selMhp, t, hm, fm)} style={sBtn(C.navyLt, 'white', { fontSize: '12px', padding: '10px 0' })}>ATTACH MHP</button>
-              </div>
-            </div>
-          )}
+          {renderMhpSlot(1)}
+          {renderMhpSlot(2)}
         </div>
       </motion.div>
     );
@@ -744,7 +894,7 @@ export default function MobileMockup() {
     return (
       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1, overflow: 'auto', background: C.bg, padding: '8px', fontFamily: FONT }}>
         <div style={{ background: 'white', borderRadius: '8px', border: `1px solid ${C.border}`, overflow: 'hidden', maxWidth: '600px', margin: '0 auto' }}>
-          <FormHdr title="Loaded Trucks" sub={`${u.mhp || 'No MHP'} · ${u.id}`} />
+          <FormHdr title="Loaded Trucks" sub={`${mhpLabel(u)} · ${u.id}`} />
           <div style={{ padding: '12px' }}>
             <div style={{ background: C.successBg, border: `1px solid ${C.success}`, borderRadius: '6px', padding: '10px', marginBottom: '12px' }}>
               <div style={{ fontSize: '12px', color: '#065F46', fontWeight: 700 }}>Active Sequence: {u.op}</div>
