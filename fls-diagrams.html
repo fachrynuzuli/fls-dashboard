@@ -242,7 +242,18 @@
         <div style="font-size:10px;font-weight:400;color:var(--gray400);">Supporting Diagrams · BRD Addendum v1.0</div>
       </div>
     </div>
-    <div class="meta">Fleet Dispatch System Enhancement · PTSI · March 2026</div>
+    
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <div style="display: flex; gap: 8px; border-right: 1px solid var(--gray200); padding-right: 16px; margin-right: 16px;">
+        <a href="./" style="font-size: 11px; font-weight: 700; color: var(--blue); text-decoration: none; display: flex; align-items: center; gap: 5px; padding: 6px 12px; background: var(--blueL); border-radius: 6px; transition: all 0.2s;">
+          <span>🏠</span> Dashboard
+        </a>
+        <a href="./fls-diagrams" style="font-size: 11px; font-weight: 700; color: var(--gray700); text-decoration: none; display: flex; align-items: center; gap: 5px; padding: 6px 12px; background: var(--gray100); border-radius: 6px; transition: all 0.2s;">
+          <span>📱</span> Back to App
+        </a>
+      </div>
+      <div class="meta">Fleet Dispatch System Enhancement · PTSI · March 2026</div>
+    </div>
   </div>
 
   <!-- DISCLAIMER -->
@@ -278,7 +289,7 @@
         <div class="section-tag tag-blue">Diagram 0 · Sequence Diagram</div>
         <div class="section-title">DA Data Capture — Message Sequence Across Systems</div>
         <div class="section-desc">
-          Ordered message sequence between Traffic Controller, Digifleet App, FDS Backend, Max-C,
+          Ordered message sequence between TRAFFIC_CONTROLLER, Digifleet App, FDS Backend, Max-C,
           and FUTONG_ADMIN covering all 7 DA prerequisite data capture requirements.
           Shows actual-event timestamps (user-entered, retroactive) and system save timestamps
           stored independently for every record.
@@ -295,7 +306,7 @@
         sequenceDiagram
         autonumber
         participant FA as FUTONG_ADMIN
-        participant TC as Traffic Controller
+        participant TC as TRAFFIC_CONTROLLER
         participant DG as Digifleet App
         participant FDS as FDS Backend
         participant MC as Max-C
@@ -431,7 +442,7 @@
         subgraph USERS["👥 Human Actors"]
         direction TB
         FA["🔑 FUTONG_ADMIN\n(Ops Manager)"]
-        TC["👷 Traffic Controller\n(Field — Digifleet)"]
+        TC["👷 TRAFFIC_CONTROLLER\n(Field — Digifleet)"]
         OP["🦺 MH Operator\n(Field — Digifleet)"]
         GM["📋 General Manager\n(Read-only dashboards)"]
         PL["📅 Planner\n(FDS Web)"]
@@ -459,7 +470,7 @@
 
         subgraph EXT["🔗 External Systems"]
         MAXC["⚖️ Max-C\n(Weighbridge / TMS)\nNETWEIGHT per trip"]
-        TRMS["📊 TRMS\n(Transport Mgmt)\nTimesheet · Dispatch"]
+        TRMS["📊 TrMS\n(Transport Mgmt)\nTimesheet · Dispatch"]
         SAP["🏢 SAP\nIWI · Material Grade"]
         end
 
@@ -550,7 +561,7 @@
     <div class="section-body">
       <div class="mermaid">
         flowchart TD
-        subgraph TC["👷 Traffic Controller"]
+        subgraph TC["👷 TRAFFIC_CONTROLLER"]
         T1(["Shift Start\n06:00"])
         T2["Open Digifleet\nEquipment List"]
         T3{"Downtime\nevent?"}
@@ -637,7 +648,7 @@
 
     <div class="legend">
       <div class="legend-item">
-        <div class="legend-swatch" style="background:#16A34A"></div> Traffic Controller actions
+        <div class="legend-swatch" style="background:#16A34A"></div> TRAFFIC_CONTROLLER actions
       </div>
       <div class="legend-item">
         <div class="legend-swatch" style="background:#7C3AED"></div> Digifleet app processing
