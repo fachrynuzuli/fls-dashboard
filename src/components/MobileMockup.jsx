@@ -16,7 +16,7 @@ const MONO = "'JetBrains Mono', monospace";
 
 const OPERATORS = ['Willyanto', 'Anggiat', 'Suharno', 'Ricardo', 'Faozi', 'Indahlen', 'Sahat', 'Arnol', 'Parningotan', 'Rivqi', 'Ikrar', 'Edon', 'Pusen', 'Juli'];
 const BARGES = ['BG. Sentosa Jaya 2308', 'BG. Glory Marine 7', 'BG. Glory Marine 3', 'BG. Capricorn 119', 'BG. Capricorn 122', 'BG. Glory Marine 12'];
-const MHPS = ['MHP0025', 'MHP0026', 'MHP0027', 'MHP0028', 'MHP0029', 'MHP0030', 'MHP0031', 'MHP0032'];
+const MHPS = ['MHP0025', 'MHP0026', 'MHP0027', 'MHP0028'];
 const DT_CATS = ['Daily Maintenance', 'Preventive Service', 'Urgent Repair', 'Breakdown'];
 const WOOD_TYPES = ['ACDB', 'ACBO', 'ACWC', 'AMBO', 'AMDB', 'EUBO', 'EUDB', 'EUWC', 'GMDB', 'GMBO'];
 
@@ -130,12 +130,12 @@ export default function MobileMockup() {
 
   const doStartSeq = (id, op, t, hm, fm, op2, hm2, fm2) => {
     const u = state.units.find(x => x.id === id);
-    if (!op || (u.mhp2 && !op2)) { alert('⚠️ Please select an operator for all attached MHPs.'); return; }
-    if (u.mhp2 && op === op2) { alert('⚠️ Operators for Primary and Secondary MHPs must be different.'); return; }
-    const activeOps = state.units.filter(x => x.id !== id && x.status === 'running')
-      .flatMap(x => [x.op, x.op2]).filter(o => o && o !== '—');
-    if (activeOps.includes(op) || (u.mhp2 && activeOps.includes(op2))) { alert('⚠️ One or more selected Operators are already on duty elsewhere.'); return; }
-    mut(id, { status: 'running', op, op2: op2 || '—', seq: { op, op2: op2 || '—', startTime: t, hmStart: +hm, fmStart: +fm, hm2Start: +(hm2||0), fm2Start: +(fm2||0), loads: [] }, hm: +hm, fm: +fm, hm2: +(hm2||0), fm2: +(fm2||0), load: null });
+    mut(id, { 
+      status: 'running', 
+      op, op2: u.mhp2 ? op2 : '—', 
+      seq: { op, op2: u.mhp2 ? op2 : '—', startTime: t, hmStart: +hm, fmStart: +fm, hm2Start: +(hm2||0), fm2Start: +(fm2||0), loads: [] }, 
+      hm: +hm, fm: +fm, hm2: +(hm2||0), fm2: +(fm2||0), load: null 
+    });
     nav('tc');
   };
   const doEndSeq = (id, t, hm, fm, hm2, fm2) => {
@@ -226,8 +226,38 @@ export default function MobileMockup() {
   const doDetach = (id, t) => { mut(id, { barge: null, bargeAt: null }); nav('tc'); };
     const doAttachMhp = (id, m, t, hm, fm, slot = 1) => { 
     const u = gu(id); 
-    const attachedMhps = state.units.flatMap(x => [x.mhp, x.mhp2]).filter(Boolean);
-    if (attachedMhps.includes(m)) { alert('⚠️ This Material Handler is already attached to a Loading Point.'); return; }
+    // Hot Swap Logic: If MHP is attached elsewhere, detach it first
+    const prevOwner = state.units.find(x => x.mhp === m || x.mhp2 === m);
+    if (prevOwner) {
+      if (prevOwner.id === id) { alert(`⚠️ ${m} is already attached to this Loading Point.`); return; }
+      if (prevOwner.status === 'running') { alert(`⚠️ ${m} is currently in an active sequence on ${prevOwner.id}. Please end that sequence first.`); return; }
+      
+      // Perform automated detachment from previous owner
+      setState(v => ({
+        ...v,
+        units: v.units.map(u => {
+          if (u.id === prevOwner.id) {
+            return { 
+              ...u, 
+              mhp: u.mhp === m ? null : u.mhp, 
+              mhp2: u.mhp2 === m ? null : u.mhp2,
+              mhpAt: u.mhp === m ? null : u.mhpAt,
+              mhp2At: u.mhp2 === m ? null : u.mhp2At
+            };
+          }
+          if (u.id === id) {
+            const patch = slot === 1 
+              ? { mhp: m, mhpAt: t, hm: +hm, fm: +fm } 
+              : { mhp2: m, mhp2At: t, hm2: +hm, fm2: +fm };
+            return { ...u, ...patch };
+          }
+          return u;
+        })
+      }));
+      nav('tc');
+      return;
+    }
+
     if (slot === 1) {
       if (u.mhp) { alert('⚠️ Detach current Primary MHP first.'); return; }
       mut(id, { mhp: m, mhpAt: t, hm: +hm, fm: +fm });
@@ -384,8 +414,13 @@ export default function MobileMockup() {
           </button>
         </div>
         {/* Cards row */}
-        <div style={{ padding: '10px', display: 'flex', gap: '10px', flexWrap: 'nowrap', overflowX: 'auto', overflowY: 'hidden', flex: 1, alignItems: 'flex-start' }}>
+        <div style={{ padding: '10px', display: 'flex', gap: '10px', flexWrap: 'nowrap', overflowX: 'auto', overflowY: 'hidden', flex: 1, alignItems: 'flex-start', position: 'relative' }}>
           {units.map(u => <MhCard key={u.id} u={u} />)}
+          <div style={{ position: 'sticky', right: -10, top: 0, bottom: 0, width: '40px', background: 'linear-gradient(to left, rgba(240,242,247,0.9), transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 10 }}>
+            <div style={{ background: C.navy, color: 'white', padding: '4px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 900, boxShadow: '0 4px 10px rgba(0,0,0,0.2)', opacity: 0.8, transform: 'translateX(10px)' }}>
+              &gt; P5
+            </div>
+          </div>
         </div>
       </motion.div>
     );
@@ -404,6 +439,15 @@ export default function MobileMockup() {
         <div style={{ background: 'white', borderRadius: '8px', border: `1px solid ${C.border}`, overflow: 'hidden', maxWidth: '480px', margin: '0 auto' }}>
           <FormHdr title="Start Sequence" sub={`${mhpLabel(u)} · ${u.id} — Pair Operator & MH`} />
           <div style={{ padding: '12px' }}>
+            {u.mhp2 && (
+              <div style={{ background: '#EEF2FF', border: '1px solid #7B93DB', borderRadius: '6px', padding: '8px 10px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '14px' }}>⚙️</span>
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: C.navyLt }}>DUAL MHP MODE</div>
+                  <div style={{ fontSize: '9px', color: '#6366F1' }}>Primary & Secondary MHPs detected. Two operators required.</div>
+                </div>
+              </div>
+            )}
             <div style={sField}><div style={sLabel}>Start Timestamp *</div><input type="datetime-local" value={t} onChange={e => setT(e.target.value)} style={sInput()} /></div>
             
             {/* Primary MHP */}
@@ -818,7 +862,7 @@ export default function MobileMockup() {
   const ScreenMhp = () => {
     const u = gu(); 
     const attachedMhps = units.flatMap(x => [x.mhp, x.mhp2]).filter(Boolean);
-    const availMhps = MHPS.filter(m => !attachedMhps.includes(m));
+    const availMhps = MHPS;
 
     const [selMhp, setSelMhp] = useState(availMhps[0] || ''); const [t, setT] = useState(now()); const [dt, setDt] = useState(now());
     const [hm, setHm] = useState(u.hm || 0); const [fm, setFm] = useState(u.fm || 0);
@@ -866,7 +910,20 @@ export default function MobileMockup() {
         <div key={slot} style={{ flex: '1 1 260px', background: 'white', borderRadius: '8px', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
           <FormHdr title={`Attach ${attachLabel}`} sub={`${u.id} — Empty Slot`} />
           <div style={{ padding: '12px' }}>
-            <div style={sField}><div style={sLabel}>Select MHP *</div><select value={sel} onChange={e => setSel(e.target.value)} style={sInput()}>{availMhps.filter(m => m !== (isMhp2 ? selMhp : selMhp2)).map(m => <option key={m} value={m}>{m}</option>)}</select></div>
+            <div style={sField}><div style={sLabel}>Select MHP *</div>
+              <select value={sel} onChange={e => setSel(e.target.value)} style={sInput()}>
+                {availMhps.filter(m => m !== (isMhp2 ? selMhp : selMhp2)).map(m => {
+                  const owner = units.find(x => x.mhp === m || x.mhp2 === m);
+                  const isAttached = !!owner;
+                  const isCurrent = owner?.id === u.id;
+                  return (
+                    <option key={m} value={m} disabled={isCurrent}>
+                      {m} {isAttached ? `(Occupied on ${owner.id})` : ''}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
             <div style={sField}><div style={sLabel}>Attach Timestamp *</div><input type="datetime-local" value={myT} onChange={e => setMyT(e.target.value)} style={sInput()} /></div>
             <div style={{ display: 'flex', gap: '8px', ...sField }}>
               <div style={{ flex: 1 }}><div style={sLabel}>HM Start *</div><input type="number" value={myHm} onChange={e => setMyHm(e.target.value)} style={sInput()} /></div>
