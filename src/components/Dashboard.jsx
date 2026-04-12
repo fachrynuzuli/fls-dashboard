@@ -278,7 +278,7 @@ const generateEqData = (period, startDate, endDate, multiplier) => {
 
   const newAvail = availData.map((d, i) => {
     const r = random(i + (multiplier * 2));
-    const availability = Math.max(75, Math.min(100, Math.round(d.availability + (r - 0.5) * 15)));
+    const availability = Math.max(75, Math.min(97, Math.round(d.availability + (r - 0.5) * 15)));
     const downtime = parseFloat((d.downtime * multiplier * (0.8 + r * 0.4)).toFixed(1));
     return { ...d, availability, downtime };
   });
@@ -516,9 +516,9 @@ function AnnualTargetModal({ isOpen, onClose, annualTargets, setAnnualTargets })
                           <div style={{ fontSize: 10, fontWeight: 700, color: "#94A3B8", marginBottom: 6 }}>Day {d}</div>
                           <input
                             type="number"
-                            value={annualTargets[dateStr]?.daily || 19000}
+                            value={annualTargets[dateStr]?.daily ?? ""}
                             onChange={(e) => {
-                              const val = Number(e.target.value);
+                              const val = e.target.value === "" ? "" : Number(e.target.value);
                               setAnnualTargets(prev => ({ ...prev, [dateStr]: { ...prev[dateStr], daily: val } }));
                             }}
                             style={{ width: "100%", background: "transparent", border: "none", fontSize: 14, fontWeight: 600, fontFamily: "DM Mono", outline: "none", color: "#0f172a" }}
@@ -560,6 +560,7 @@ function GroupA({ eqData, periodLabel }) {
   const { newAvail, newUtil, avgAvail, avgUtil, totalDowntime } = eqData;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <WarningBanner text="2 trips in this period have not yet been weighed by Max-C. Displayed tonnage may be incomplete." />
       <div style={{ display: "flex", gap: 16 }}>
         <KPITile label="Fleet Avg Availability" value={`${avgAvail}%`} accent="#34D399" sub="Target: 90.0%" />
         <KPITile label="Fleet Avg Utilization" value={`${avgUtil}%`} accent="#38BDF8" sub="Target: 54.0%" />
@@ -574,7 +575,7 @@ function GroupA({ eqData, periodLabel }) {
             <BarChart data={newAvail} margin={{ top: 20, right: 10, left: -10, bottom: 0 }}>
               <CartesianGrid stroke="#f1f5f9" strokeDasharray="3 3" />
               <XAxis dataKey="unit" tick={{ fill: "#94A3B8", fontSize: 11, fontFamily: "DM Mono" }} axisLine={false} tickLine={false} />
-              <YAxis domain={[70, 100]} tick={{ fill: "#94A3B8", fontSize: 11, fontFamily: "DM Mono" }} axisLine={false} tickLine={false} />
+              <YAxis domain={[70, 98]} tick={{ fill: "#94A3B8", fontSize: 11, fontFamily: "DM Mono" }} axisLine={false} tickLine={false} />
               <Tooltip content={customTooltip} />
               <ReferenceLine y={90} stroke={TARGET_COLOR} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: "Target 90%", fill: TARGET_COLOR, fontSize: 10, fontFamily: "DM Mono", position: "top", dy: -4 }} />
               <Bar dataKey="availability" radius={[6, 6, 0, 0]} maxBarSize={52}>
@@ -805,7 +806,7 @@ function ProgressRing({ pct, size = 160, stroke = 14, color = "#38BDF8" }) {
   );
 }
 
-function GroupC({ dailyTarget, monthlyTarget, MTD_ACTUAL, multiplier, startDate, endDate, period }) {
+function GroupC({ dailyTarget, monthlyTarget, MTD_ACTUAL, multiplier, startDate, endDate, period, periodLabel }) {
   const dailyPct = pct(DAILY_ACTUAL * multiplier, dailyTarget);
   const mtdPct = pct(MTD_ACTUAL, monthlyTarget);
   const remaining = dailyTarget - (DAILY_ACTUAL * multiplier);
@@ -1190,7 +1191,7 @@ export default function Dashboard() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#64748b" }}>
-            <span style={{ fontSize: 10, fontWeight: 700, fontFamily: "DM Mono" }}>00:40:40</span>
+            <span style={{ fontSize: 10, fontWeight: 700, fontFamily: "DM Mono" }}>06:{String(Math.floor(seedRandom(new Date().getDate()) * 59)).padStart(2, '0')}:40</span>
             <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e" }} />
           </div>
         </div>
@@ -1236,6 +1237,7 @@ export default function Dashboard() {
               startDate={startDate}
               endDate={endDate}
               period={period}
+              periodLabel={periodLabel}
             />
           )}
         </div>
