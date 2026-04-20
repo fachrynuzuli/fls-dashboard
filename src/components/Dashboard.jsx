@@ -50,9 +50,13 @@ const db003Data = {
     { woodType: "ACDB", rate: 385, target: 355 },
     { woodType: "ACBO", rate: 342, target: 355 },
     { woodType: "ACWC", rate: 415, target: 355 },
+    { woodType: "AMDB", rate: 362, target: 355 },
     { woodType: "AMBO", rate: 310, target: 355 },
-    { woodType: "GMDB", rate: 395, target: 355 },
+    { woodType: "EUDB", rate: 375, target: 355 },
+    { woodType: "EUBO", rate: 335, target: 355 },
     { woodType: "EUWC", rate: 358, target: 355 },
+    { woodType: "GMDB", rate: 395, target: 355 },
+    { woodType: "GMBO", rate: 325, target: 355 },
   ],
   bargeSize: [
     { bargeSize: "300ft", rate: 390, target: 355 },
@@ -89,9 +93,13 @@ const db007Data = {
     { woodType: "ACDB", lpt: 0.132, target: 0.143 },
     { woodType: "ACBO", lpt: 0.125, target: 0.143 },
     { woodType: "ACWC", lpt: 0.155, target: 0.143 },
+    { woodType: "AMDB", lpt: 0.138, target: 0.143 },
     { woodType: "AMBO", lpt: 0.165, target: 0.143 },
-    { woodType: "GMDB", lpt: 0.128, target: 0.143 },
+    { woodType: "EUDB", lpt: 0.140, target: 0.143 },
+    { woodType: "EUBO", lpt: 0.152, target: 0.143 },
     { woodType: "EUWC", lpt: 0.145, target: 0.143 },
+    { woodType: "GMDB", lpt: 0.128, target: 0.143 },
+    { woodType: "GMBO", lpt: 0.160, target: 0.143 },
   ],
   bargeSize: [
     { bargeSize: "300ft", lpt: 0.128, target: 0.143 },
@@ -167,9 +175,10 @@ const deliveryTrend = [
 ];
 
 const woodTypeData = [
-  { name: "ACDB", value: 74, tons: 10447, color: "#38BDF8" },
-  { name: "AMDB", value: 2, tons: 278, color: "#FB923C" },
-  { name: "GMDB", value: 24, tons: 3411, color: "#A78BFA" },
+  { name: "ACDB", value: 65, tons: 9188, color: "#38BDF8" },
+  { name: "AMDB", value: 2, tons: 283, color: "#FB923C" },
+  { name: "GMDB", value: 20, tons: 2827, color: "#A78BFA" },
+  { name: "EUDB", value: 13, tons: 1838, color: "#34D399" },
 ];
 
 const generateWoodData = (period, startDate, endDate, multiplier) => {
@@ -178,9 +187,10 @@ const generateWoodData = (period, startDate, endDate, multiplier) => {
   const r = (i) => seedRandom(seed + i * 13);
 
   // Vary % split slightly around base values, total always ~100
-  const acdb = Math.max(60, Math.min(85, Math.round(74 + (r(1) - 0.5) * 20)));
+  const acdb = Math.max(50, Math.min(75, Math.round(65 + (r(1) - 0.5) * 20)));
   const amdb = Math.max(1, Math.min(8, Math.round(2 + (r(2) - 0.5) * 6)));
-  const gmdb = 100 - acdb - amdb;
+  const eudb = Math.max(5, Math.min(20, Math.round(13 + (r(3) - 0.5) * 10)));
+  const gmdb = 100 - acdb - amdb - eudb;
 
   const totalTons = Math.round(DAILY_ACTUAL * multiplier);
 
@@ -188,6 +198,7 @@ const generateWoodData = (period, startDate, endDate, multiplier) => {
     { name: "ACDB", value: acdb, tons: Math.round(totalTons * acdb / 100), color: "#38BDF8" },
     { name: "AMDB", value: amdb, tons: Math.round(totalTons * amdb / 100), color: "#FB923C" },
     { name: "GMDB", value: gmdb, tons: Math.round(totalTons * gmdb / 100), color: "#A78BFA" },
+    { name: "EUDB", value: eudb, tons: Math.round(totalTons * eudb / 100), color: "#34D399" },
   ];
 };
 

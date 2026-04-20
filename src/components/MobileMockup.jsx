@@ -18,7 +18,7 @@ const OPERATORS = ['Willyanto', 'Anggiat', 'Suharno', 'Ricardo', 'Faozi', 'Indah
 const BARGES = ['BG. Sentosa Jaya 2308', 'BG. Glory Marine 7', 'BG. Glory Marine 3', 'BG. Capricorn 119', 'BG. Capricorn 122', 'BG. Glory Marine 12'];
 const MHPS = ['MHP0025', 'MHP0026', 'MHP0027', 'MHP0028'];
 const DT_CATS = ['Daily Maintenance', 'Preventive Service', 'Urgent Repair', 'Breakdown'];
-const WOOD_TYPES = ['ACDB', 'ACBO', 'ACWC', 'AMBO', 'AMDB', 'EUBO', 'EUDB', 'EUWC', 'GMDB', 'GMBO'];
+const WOOD_TYPES = ['ACDB', 'ACBO', 'ACWC', 'AMDB', 'AMBO', 'EUDB', 'EUBO', 'EUWC', 'GMDB', 'GMBO'];
 
 const SK = 'fls_dashboard_state';
 const now = (offsetMin = 0) => {
