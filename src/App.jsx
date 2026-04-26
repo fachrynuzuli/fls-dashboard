@@ -5,6 +5,7 @@ import Header from "./components/Header";
 import Dashboard from "./components/Dashboard";
 import DiagramsPage from "./components/DiagramsPage";
 import MobileMockup from "./components/MobileMockup";
+import Changelog from "./components/Changelog";
 
 export default function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -34,6 +35,7 @@ export default function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/fls-diagrams" element={<DiagramsPage />} />
               <Route path="/mobile-mockup" element={<MobileMockup />} />
+              <Route path="/changelog" element={<Changelog />} />
             </Routes>
           </div>
         </div>

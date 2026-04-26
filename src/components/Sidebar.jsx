@@ -120,6 +120,23 @@ export default function Sidebar({ collapsed }) {
               <span style={{ fontSize: 20 }}>📱</span>
               <span>Mobile Mockup</span>
             </NavLink>
+            <NavLink
+              to="/changelog"
+              style={({ isActive }) => ({
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                width: "100%", padding: "14px",
+                background: isActive ? "#0f172a" : "#cbd5e1",
+                color: isActive ? "white" : "#334155", border: "none", borderRadius: 12,
+                fontWeight: 800, fontSize: 13, cursor: "pointer",
+                textDecoration: "none",
+                transition: "all 0.3s", textTransform: "uppercase", letterSpacing: "0.05em",
+                boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
+                fontFamily: "'Inter', sans-serif"
+              })}
+            >
+              <span style={{ fontSize: 20 }}>📜</span>
+              <span>Changelog</span>
+            </NavLink>
           </div>
         )}
       </div>

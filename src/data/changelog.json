@@ -1,0 +1,137 @@
+[
+  {
+    "hash": "dcf17ac",
+    "date": "2026-04-27",
+    "msg": "feat: add global changelog viewer and animate mobile screen metadata"
+  },
+  {
+    "hash": "4f0823c",
+    "date": "2026-04-27",
+    "msg": "feat: complete TC mobile mockup v2 with HM validation and breakdown system"
+  },
+  {
+    "hash": "0f82dcf",
+    "date": "2026-04-20",
+    "msg": "feat: add and sort wood types for EUDB, EUBO, AMDB, and GMBO"
+  },
+  {
+    "hash": "4bee849",
+    "date": "2026-04-13",
+    "msg": "fix: calibrate machinery availability ceiling and improve target input usability"
+  },
+  {
+    "hash": "60e7bbc",
+    "date": "2026-04-13",
+    "msg": "feat: dynamic filter engine, date range picker, keyboard shortcuts"
+  },
+  {
+    "hash": "022f01f",
+    "date": "2026-03-17",
+    "msg": "feat(mobile): add secondary MHP support and enforce assignment uniqueness"
+  },
+  {
+    "hash": "812aeda",
+    "date": "2026-03-17",
+    "msg": "feat: implement truck reassignment and partial loading in mobile mockup"
+  },
+  {
+    "hash": "465b161",
+    "date": "2026-03-17",
+    "msg": "Enhance dashboard: expanded mock data, synchronized woodType nomenclature, advanced UI animations, and UX improvements"
+  },
+  {
+    "hash": "9e9d87c",
+    "date": "2026-03-16",
+    "msg": "feat: Add Stack and Wood Type to Finish Loading"
+  },
+  {
+    "hash": "6bb59dd",
+    "date": "2026-03-16",
+    "msg": "feat: make P1-P5 clickable for MHP management (attach/detach)"
+  },
+  {
+    "hash": "ebe5e27",
+    "date": "2026-03-16",
+    "msg": "cleaning"
+  },
+  {
+    "hash": "2b822d5",
+    "date": "2026-03-16",
+    "msg": "Update BRD v2.0 structure to strictly match original v1.2 DOCX"
+  },
+  {
+    "hash": "597aa11",
+    "date": "2026-03-16",
+    "msg": "Add BRD v2.0 for Digifleet TC Module Java native rebuild"
+  },
+  {
+    "hash": "f803b36",
+    "date": "2026-03-16",
+    "msg": "Mock data dashboard"
+  },
+  {
+    "hash": "0c6c2d5",
+    "date": "2026-03-16",
+    "msg": "TC Dashboard v2: increase tablet frame height to 520px"
+  },
+  {
+    "hash": "0f53ea5",
+    "date": "2026-03-16",
+    "msg": "TC Dashboard v2: full PRD rewrite with localStorage, 10 screens, 5 LPs, real operator names"
+  },
+  {
+    "hash": "4567dc8",
+    "date": "2026-03-16",
+    "msg": "Update home page MH cards to use horizontal scrolling to resemble real jetty"
+  },
+  {
+    "hash": "6ec57d8",
+    "date": "2026-03-16",
+    "msg": "Redesign TC Dashboard to model port flow, add global state, truck queues, status pills, and summary widgets"
+  },
+  {
+    "hash": "5e90501",
+    "date": "2026-03-16",
+    "msg": "Enhance mobile mockup with more realistic timesheet dummy data and dynamic totals"
+  },
+  {
+    "hash": "cf8da77",
+    "date": "2026-03-16",
+    "msg": "Refactor mobile mockup to interactive prototype, fix padding warning, align old html file"
+  },
+  {
+    "hash": "98fa873",
+    "date": "2026-03-13",
+    "msg": "Fix: Mermaid diagram syntax errors and update mobile mockup to landscape"
+  },
+  {
+    "hash": "0bc3d2a",
+    "date": "2026-03-13",
+    "msg": "feat: add mobile mockup route (/mobile-mockup)"
+  },
+  {
+    "hash": "b9b8299",
+    "date": "2026-03-12",
+    "msg": "refactor: update favicon, page title, and refine Mermaid diagram formatting in the dashboard mock-up."
+  },
+  {
+    "hash": "b2b3c94",
+    "date": "2026-03-12",
+    "msg": "update favicon, page title, and refine Mermaid diagram formatting in the dashboard mock-up."
+  },
+  {
+    "hash": "ddeeeb1",
+    "date": "2026-03-12",
+    "msg": "fls-diagrams details"
+  },
+  {
+    "hash": "ccf4f44",
+    "date": "2026-03-12",
+    "msg": "feat: integrate target config, chart filters, and prepare for gh-pages deployment"
+  },
+  {
+    "hash": "18ccece",
+    "date": "2026-03-12",
+    "msg": "initial commit"
+  }
+]

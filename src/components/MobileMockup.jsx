@@ -1112,11 +1112,27 @@ export default function MobileMockup() {
       </div>
 
       {/* External Info Bar */}
-      <div style={{ background: 'white', padding: '10px 14px', borderRadius: '8px', border: `1px solid ${C.border}`, marginBottom: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-        <div style={{ fontSize: '10px', fontWeight: 700, color: C.navyLt, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: FONT }}>{si.l}</div>
-        <div style={{ fontSize: '12px', color: C.text, lineHeight: 1.5 }}>{si.i}</div>
-        {scr !== 'tc' && <button onClick={() => nav('tc')} style={{ marginTop: '8px', background: '#F3F4F6', border: `1px solid ${C.border}`, padding: '3px 10px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', fontWeight: 600, color: C.navyLt, fontFamily: FONT }}>← Back to TC Dashboard</button>}
-      </div>
+      <motion.div 
+        key={scr}
+        initial={{ backgroundColor: '#FEF3C7', y: -4, borderColor: '#F59E0B', boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)' }}
+        animate={{ backgroundColor: '#FFFFFF', y: 0, borderColor: C.border, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        style={{ padding: '10px 14px', borderRadius: '8px', border: `1px solid ${C.border}`, marginBottom: '12px', overflow: 'hidden' }}
+      >
+        <div style={{ fontSize: '10px', fontWeight: 700, color: C.navyLt, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: FONT, display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <motion.span 
+            initial={{ scale: 0 }} 
+            animate={{ scale: 1 }} 
+            transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
+            style={{ display: 'inline-block', width: '6px', height: '6px', background: C.teal, borderRadius: '50%' }}
+          />
+          {si.l}
+        </div>
+        <motion.div initial={{ opacity: 0.5 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+          <div style={{ fontSize: '12px', color: C.text, lineHeight: 1.5 }}>{si.i}</div>
+          {scr !== 'tc' && <button onClick={() => nav('tc')} style={{ marginTop: '8px', background: '#F3F4F6', border: `1px solid ${C.border}`, padding: '3px 10px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', fontWeight: 600, color: C.navyLt, fontFamily: FONT }}>← Back to TC Dashboard</button>}
+        </motion.div>
+      </motion.div>
 
       {/* Device frame */}
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px 0', background: '#e8ecf4', borderRadius: '12px', flex: 1 }}>
